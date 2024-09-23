@@ -1,9 +1,13 @@
-using Application.Repositories.Shared;
-using Domain.Entities;
-
 namespace Application.Repositories;
 
 public interface ISubjectRepository : IRepository<Subject>
 {
     Task<Subject?> GetByIdWithQualificationsAsync(Guid id);
+
+    Task<Subject?> GetByNameAndSystemIdAsync(
+        string subjectName,
+        Guid learningSystemId,
+        CancellationToken cancellationToken);
+
+    Task<IEnumerable<Subject>> GetByLearningSystemIdAsync(Guid systemId, CancellationToken cancellationToken);
 }

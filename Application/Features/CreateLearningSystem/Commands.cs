@@ -1,9 +1,6 @@
-using Application.Shared;
-using MediatR;
-
 namespace Application.Features.CreateLearningSystem;
 
-public record CreateNewSystemCommand(string Name, List<CreateSubjectCommand> Subjects) : IRequest<Result>;
+public record CreateLearningSystemCommand(string Name, List<CreateSubjectCommand> Subjects) : IRequest<ErrorOr<CreateLearningSystemCommandResponse>>;
 
 public record CreateSubjectCommand(string Name, List<CreateQualificationCommand> Qualifications);
 

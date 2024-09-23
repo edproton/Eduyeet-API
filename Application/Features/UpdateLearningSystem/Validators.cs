@@ -1,8 +1,8 @@
-namespace Application.Features.CreateLearningSystem;
+namespace Application.Features.UpdateLearningSystem;
 
-public class CreateLearningSystemCommandValidator : AbstractValidator<CreateLearningSystemCommand>
+public class UpdateLearningSystemCommandValidator : AbstractValidator<UpdateLearningSystemCommand>
 {
-    public CreateLearningSystemCommandValidator()
+    public UpdateLearningSystemCommandValidator()
     {
         RuleFor(c => c.Name)
             .NotEmpty().WithMessage("System name cannot be empty.")
@@ -11,13 +11,13 @@ public class CreateLearningSystemCommandValidator : AbstractValidator<CreateLear
         RuleFor(c => c.Subjects)
             .NotEmpty().WithMessage("At least one subject is required.");
 
-        RuleForEach(c => c.Subjects).SetValidator(new CreateSubjectCommandValidator());
+        RuleForEach(c => c.Subjects).SetValidator(new UpdateSubjectCommandValidator());
     }
 }
 
-public class CreateSubjectCommandValidator : AbstractValidator<CreateSubjectCommand>
+public class UpdateSubjectCommandValidator : AbstractValidator<UpdateSubjectCommand>
 {
-    public CreateSubjectCommandValidator()
+    public UpdateSubjectCommandValidator()
     {
         RuleFor(c => c.Name)
             .NotEmpty().WithMessage("Subject name cannot be empty.")
@@ -26,13 +26,13 @@ public class CreateSubjectCommandValidator : AbstractValidator<CreateSubjectComm
         RuleFor(c => c.Qualifications)
             .NotEmpty().WithMessage("At least one qualification is required for each subject.");
 
-        RuleForEach(c => c.Qualifications).SetValidator(new CreateQualificationCommandValidator());
+        RuleForEach(c => c.Qualifications).SetValidator(new UpdateQualificationCommandValidator());
     }
 }
 
-public class CreateQualificationCommandValidator : AbstractValidator<CreateQualificationCommand>
+public class UpdateQualificationCommandValidator : AbstractValidator<UpdateQualificationCommand>
 {
-    public CreateQualificationCommandValidator()
+    public UpdateQualificationCommandValidator()
     {
         RuleFor(c => c.Name)
             .NotEmpty().WithMessage("Qualification name cannot be empty.")
