@@ -1,5 +1,17 @@
 namespace Application.Features.CreateLearningSystem;
 
+public record CreateLearningSystemCommand(string Name) : IRequest<ErrorOr<CreateLearningSystemCommandResponse>>;
+
+public class CreateLearningSystemCommandValidator : AbstractValidator<CreateLearningSystemCommand>
+{
+    public CreateLearningSystemCommandValidator()
+    {
+        RuleFor(c => c.Name)
+            .NotEmpty().WithMessage("System name cannot be empty.")
+            .MaximumLength(100).WithMessage("System name cannot exceed 100 characters.");
+    }
+}
+
 public class Handler(
     IUnitOfWork unitOfWork,
     ILearningSystemRepository systemRepository,
@@ -26,3 +38,5 @@ public class Handler(
         return new CreateLearningSystemCommandResponse(system.Id);
     }
 }
+
+public record CreateLearningSystemCommandResponse(Guid LearningSystemId);

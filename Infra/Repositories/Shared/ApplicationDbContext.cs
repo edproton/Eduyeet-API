@@ -1,15 +1,19 @@
 using Domain.Entities;
+using Infra.ValueObjects;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infra.Repositories.Shared;
 
 public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-    : DbContext(options)
+    : IdentityDbContext(options)
 {
     
     public DbSet<LearningSystem> LearningSystems { get; set; }
     public DbSet<Subject> Subjects { get; set; }
     public DbSet<Qualification> Qualifications { get; set; }
+    public DbSet<ApplicationUser> ApplicationUsers { get; set; }
+    public DbSet<Person> Persons { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -30,5 +34,10 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
                 .HasForeignKey(q => q.SubjectId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
+        
+        modelBuilder.Entity<ApplicationUser>()
+            .HasOne(au => au.Person)
+            .WithOne()
+            .HasForeignKey<ApplicationUser>(au => au.PersonId);
     }
 }
