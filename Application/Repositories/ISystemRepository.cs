@@ -10,4 +10,5 @@ public interface ISubjectRepository : IRepository<Subject>
         CancellationToken cancellationToken);
 
     Task<IEnumerable<Subject>> GetByLearningSystemIdAsync(Guid systemId, CancellationToken cancellationToken);
+    Task<Subject?> GetByNameAsync(string subjectName, CancellationToken cancellationToken);
 }

@@ -1,6 +1,5 @@
 using Infra.Extensions.DependencyInjection;
 using Infra.Options;
-using Infra.Repositories;
 using Infra.Repositories.Shared;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

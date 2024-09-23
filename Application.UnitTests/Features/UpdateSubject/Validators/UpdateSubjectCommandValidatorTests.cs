@@ -1,35 +1,35 @@
-using Application.Features.CreateLearningSystem;
+using Application.Features.UpdateSubject;
 using FluentValidation.TestHelper;
 
-namespace Application.UnitTests.Features.CreateNewSystem.Validators;
+namespace Application.UnitTests.Features.UpdateSubject.Validators;
 
 [TestClass]
-public class CreateLearningSystemValidatorTests
+public class UpdateSubjectCommandValidatorTests
 {
-    private readonly CreateLearningSystemCommandValidator _validator = new();
+    private readonly UpdateSubjectCommandValidator _validator = new();
 
     [TestMethod]
     public void ShouldHaveErrorWhenNameIsEmpty()
     {
-        var command = new CreateLearningSystemCommand("");
+        var command = new UpdateSubjectCommand(Guid.NewGuid(), "");
         var result = _validator.TestValidate(command);
         result.ShouldHaveValidationErrorFor(c => c.Name)
-            .WithErrorMessage("System name cannot be empty.");
+            .WithErrorMessage("Subject name cannot be empty.");
     }
 
     [TestMethod]
     public void ShouldHaveErrorWhenNameExceeds100Characters()
     {
-        var command = new CreateLearningSystemCommand(new string('a', 101));
+        var command = new UpdateSubjectCommand(Guid.NewGuid(), new string('a', 101));
         var result = _validator.TestValidate(command);
         result.ShouldHaveValidationErrorFor(c => c.Name)
-            .WithErrorMessage("System name cannot exceed 100 characters.");
+            .WithErrorMessage("Subject name cannot exceed 100 characters.");
     }
 
     [TestMethod]
     public void ShouldNotHaveErrorWhenCommandIsValid()
     {
-        var command = new CreateLearningSystemCommand("ValidName");
+        var command = new UpdateSubjectCommand(Guid.NewGuid(), "ValidName");
         var result = _validator.TestValidate(command);
         result.ShouldNotHaveAnyValidationErrors();
     }

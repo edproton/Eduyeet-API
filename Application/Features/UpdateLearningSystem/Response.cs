@@ -1,3 +1,0 @@
-namespace Application.Features.UpdateLearningSystem;
-
-public record CreateLearningSystemCommandResponse(Guid LearningSystemId);

@@ -1,17 +1,17 @@
-using Application.Features.CreateLearningSystem;
+using Application.Features.UpdateQualification;
 using FluentValidation.TestHelper;
 
-namespace Application.UnitTests.Features.CreateNewSystem.Validators;
+namespace Application.UnitTests.Features.UpdateQualification.Validators;
 
 [TestClass]
-public class CreateQualificationCommandValidatorTests
+public class UpdateQualificationCommandValidatorTests
 {
-    private readonly CreateQualificationCommandValidator _validator = new();
+    private readonly UpdateQualificationCommandValidator _validator = new();
 
     [TestMethod]
     public void ShouldHaveErrorWhenNameIsEmpty()
     {
-        var command = new CreateQualificationCommand("");
+        var command = new UpdateQualificationCommand(Guid.NewGuid(), "");
         var result = _validator.TestValidate(command);
         result.ShouldHaveValidationErrorFor(c => c.Name)
             .WithErrorMessage("Qualification name cannot be empty.");
@@ -20,7 +20,7 @@ public class CreateQualificationCommandValidatorTests
     [TestMethod]
     public void ShouldHaveErrorWhenNameExceeds100Characters()
     {
-        var command = new CreateQualificationCommand(new string('a', 101));
+        var command = new UpdateQualificationCommand(Guid.NewGuid(), new string('a', 101));
         var result = _validator.TestValidate(command);
         result.ShouldHaveValidationErrorFor(c => c.Name)
             .WithErrorMessage("Qualification name cannot exceed 100 characters.");
@@ -29,7 +29,7 @@ public class CreateQualificationCommandValidatorTests
     [TestMethod]
     public void ShouldNotHaveErrorWhenCommandIsValid()
     {
-        var command = new CreateQualificationCommand("ValidName");
+        var command = new UpdateQualificationCommand(Guid.NewGuid(), "ValidName");
         var result = _validator.TestValidate(command);
         result.ShouldNotHaveAnyValidationErrors();
     }

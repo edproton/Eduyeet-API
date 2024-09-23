@@ -8,4 +8,6 @@ public interface IQualificationRepository : IRepository<Qualification>
         CancellationToken cancellationToken);
 
     Task<IEnumerable<Qualification>> GetBySubjectIdAsync(Guid subjectId, CancellationToken cancellationToken);
+
+    Task<Qualification?> GetByNameAsync(string qualificationName, CancellationToken cancellationToken);
 }

@@ -26,4 +26,10 @@ public class QualificationRepository(ApplicationDbContext context)
             .Where(q => q.SubjectId == subjectId)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<Qualification?> GetByNameAsync(string qualificationName, CancellationToken cancellationToken)
+    {
+        return await Context.Qualifications
+            .FirstOrDefaultAsync(q => EF.Functions.ILike(q.Name, qualificationName), cancellationToken);
+    }
 }

@@ -1,5 +1,4 @@
 using Application.Repositories.Shared;
-using Microsoft.EntityFrameworkCore;
 
 namespace Infra.Repositories.Shared;
 

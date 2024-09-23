@@ -32,4 +32,10 @@ public class SubjectRepository(ApplicationDbContext context) : Repository<Subjec
             .Where(s => s.LearningSystemId == systemId)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<Subject?> GetByNameAsync(string subjectName, CancellationToken cancellationToken)
+    {
+        return await Context.Subjects
+            .FirstOrDefaultAsync(s => EF.Functions.ILike(s.Name, subjectName), cancellationToken);
+    }
 }
