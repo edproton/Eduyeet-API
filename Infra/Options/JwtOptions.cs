@@ -18,7 +18,7 @@ public class JwtOptions
     public required string Audience { get; init; }
 
     [Required]
-    public required int ExpiryMinutes { get; init; }
+    public required int ExpireInMinutes { get; init; }
 }
 
 public class JwtOptionsConfigure(IOptions<JwtOptions> jwtOptions) : IConfigureNamedOptions<JwtBearerOptions>
@@ -41,6 +41,26 @@ public class JwtOptionsConfigure(IOptions<JwtOptions> jwtOptions) : IConfigureNa
 
         options.Events = new()
         {
+            OnForbidden = (ctx) =>
+            {
+                
+                return Task.CompletedTask;
+            },
+            OnAuthenticationFailed = (ctx) =>
+            {
+                
+                return Task.CompletedTask;
+            },
+            OnChallenge = (ctx) =>
+            {
+                
+                return Task.CompletedTask;
+            },
+            OnTokenValidated = (ctx) =>
+            {
+                
+                return Task.CompletedTask;
+            },
         };
     }
 

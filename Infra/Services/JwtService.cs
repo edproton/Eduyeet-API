@@ -1,8 +1,10 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Infra.Options;
 using Infra.ValueObjects;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Infra.Services;
@@ -14,8 +16,10 @@ public interface IJwtService
     ClaimsPrincipal? ValidateToken(string token);
 }
 
-public class JwtService(IConfiguration configuration) : IJwtService
+public class JwtService(IOptions<JwtOptions> jwtOptions) : IJwtService
 {
+    private readonly JwtOptions _jwtOptions = jwtOptions.Value;
+
     public string GenerateToken(ApplicationUser user)
     {
         if (user.UserName == null)
@@ -30,14 +34,14 @@ public class JwtService(IConfiguration configuration) : IJwtService
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
         };
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Key"]));
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.Secret));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(
-            issuer: configuration["Jwt:Issuer"],
-            audience: configuration["Jwt:Audience"],
+            issuer: _jwtOptions.Issuer,
+            audience: _jwtOptions.Audience,
             claims: claims,
-            expires: DateTime.Now.AddMinutes(30),
+            expires: DateTime.UtcNow.AddMinutes(_jwtOptions.ExpireInMinutes),
             signingCredentials: creds);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
@@ -46,7 +50,7 @@ public class JwtService(IConfiguration configuration) : IJwtService
     public ClaimsPrincipal? ValidateToken(string token)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
-        var key = Encoding.ASCII.GetBytes(configuration["Jwt:Key"]);
+        var key = Encoding.UTF8.GetBytes(_jwtOptions.Secret);
         try
         {
             var principal = tokenHandler.ValidateToken(token, new TokenValidationParameters
@@ -54,9 +58,9 @@ public class JwtService(IConfiguration configuration) : IJwtService
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = new SymmetricSecurityKey(key),
                 ValidateIssuer = true,
-                ValidIssuer = configuration["Jwt:Issuer"],
+                ValidIssuer = _jwtOptions.Issuer,
                 ValidateAudience = true,
-                ValidAudience = configuration["Jwt:Audience"],
+                ValidAudience = _jwtOptions.Audience,
                 ValidateLifetime = true,
                 ClockSkew = TimeSpan.Zero
             }, out _);
