@@ -3,12 +3,10 @@ using Application.Repositories.Shared;
 using Infra.Options;
 using Infra.Repositories;
 using Infra.Repositories.Shared;
-using Microsoft.Data.SqlClient;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Npgsql;
+using Microsoft.Extensions.Options;
 
 namespace Infra.Extensions.DependencyInjection;
 
@@ -36,18 +34,21 @@ public static class DatabaseExtensions
     {
         var dbOptions = configuration.GetSection(configurationSection).Get<DatabaseOptions>();
 
-        services.AddDbContext<TContext>((_, options) =>
+        services.AddDbContext<TContext>((sp, options) =>
         {
-            switch (dbOptions!.Provider)
+            var dbOptions = sp.GetRequiredService<IOptions<DatabaseOptions>>().Value;
+            var connectionString = dbOptions.GetConnectionString();
+        
+            switch (dbOptions.Provider)
             {
                 case DatabaseProvider.Postgres:
-                    options.UseNpgsql(BuildPostgresConnectionString(dbOptions.Postgres));
+                    options.UseNpgsql(connectionString);
                     break;
                 case DatabaseProvider.SqlServer:
-                    options.UseSqlServer(BuildSqlServerConnectionString(dbOptions.SqlServer));
+                    options.UseSqlServer(connectionString);
                     break;
                 case DatabaseProvider.Sqlite:
-                    options.UseSqlite(BuildSqliteConnectionString(dbOptions.Sqlite));
+                    options.UseSqlite(connectionString);
                     break;
                 default:
                     throw new ArgumentException($"Unsupported database provider: {dbOptions.Provider}");
@@ -62,36 +63,5 @@ public static class DatabaseExtensions
         }
 
         return services;
-    }
-
-    private static string BuildPostgresConnectionString(PostgresOptions options)
-    {
-        return new NpgsqlConnectionStringBuilder
-        {
-            Host = options.Host,
-            Port = options.Port,
-            Database = options.Database,
-            Username = options.Username,
-            Password = options.Password
-        }.ToString();
-    }
-
-    private static string BuildSqlServerConnectionString(SqlServerOptions options)
-    {
-        return new SqlConnectionStringBuilder
-        {
-            DataSource = $"{options.Host},{options.Port}",
-            InitialCatalog = options.Database,
-            UserID = options.Username,
-            Password = options.Password
-        }.ToString();
-    }
-
-    private static string BuildSqliteConnectionString(SqliteOptions options)
-    {
-        return new SqliteConnectionStringBuilder
-        {
-            DataSource = options.Filename
-        }.ToString();
     }
 }

@@ -1,5 +1,7 @@
 using System.ComponentModel.DataAnnotations;
+using Infra.Options;
 using Microsoft.Extensions.Options;
+using Npgsql;
 
 namespace API.Options;
 
@@ -24,7 +26,7 @@ public class CorsOptionsConfigure(
 
     public void Configure(Microsoft.AspNetCore.Cors.Infrastructure.CorsOptions options)
     {
-        options.AddPolicy("CorsPolicy",
+        options.AddPolicy(CorsPolicy,
             policy =>
             {
                 policy.WithOrigins(_corsOptions.AllowedOrigins)

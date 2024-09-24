@@ -1,10 +1,12 @@
+using API.Extensions.DependencyInjection;
 using API.Middlewares;
 using API.Options;
 using Application;
+using HealthChecks.UI.Client;
 using Infra;
 using Infra.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.OpenApi.Models;
-using CorsOptions = Microsoft.AspNetCore.Cors.Infrastructure.CorsOptions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -51,6 +53,8 @@ builder.Services.AddOptionsWithValidation<CorsOptions>();
 builder.Services.ConfigureOptions<CorsOptionsConfigure>();
 builder.Services.AddCors();
 
+builder.Services.AddHealthChecksServices();
+    
 var app = builder.Build();
 
 app.UseExceptionHandler();
@@ -74,6 +78,14 @@ app.UseHttpsRedirection();
 app.UseCors(CorsOptionsConfigure.CorsPolicy);
 app.UseAuthentication();
 app.UseAuthorization();
+
+
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+});
+
+app.MapHealthChecksUI(options => options.UIPath = "/health-ui");
 app.MapControllers()
     .RequireAuthorization();
 
