@@ -21,9 +21,5 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 COPY --from=build /app/publish .
 
-# Copy the placeholder replacement script
-COPY replace_placeholders.sh .
-RUN chmod +x replace_placeholders.sh
-
-# Set the script as the entrypoint
-ENTRYPOINT ["./replace_placeholders.sh"]
+# Set the entry point to your application
+ENTRYPOINT ["dotnet", "API.dll"]

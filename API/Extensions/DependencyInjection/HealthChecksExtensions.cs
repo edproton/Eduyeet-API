@@ -1,6 +1,10 @@
+using System;
 using System.Diagnostics;
+using System.Threading;
+using API.Utils;
 using Infra.Options;
 using Infra.Repositories.Shared;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 
@@ -11,7 +15,7 @@ public static class HealthChecksExtensions
     public static IServiceCollection AddHealthChecksServices(
         this IServiceCollection services)
     {
-        var maxWorkingSetMB = 1024; // 1 GB
+        var maxWorkingSet = 1.GB();
 
         services
             .AddHealthChecks()
@@ -24,34 +28,25 @@ public static class HealthChecksExtensions
             })
             .AddCheck("memory", CheckMemory)
             .AddCheck("cpu", CheckCPU)
-            .AddProcessAllocatedMemoryHealthCheck(maxWorkingSetMB)
+            .AddProcessAllocatedMemoryHealthCheck((int)maxWorkingSet.Bytes)
             .AddProcessHealthCheck("dotnet", p => p.Length > 0);
-
-        services
-            .AddHealthChecksUI(options =>
-            {
-                options.AddHealthCheckEndpoint("api", "/health");
-                options.SetEvaluationTimeInSeconds(60);
-                options.SetMinimumSecondsBetweenFailureNotifications(60);
-            })
-            .AddInMemoryStorage();
 
         return services;
     }
 
     private static HealthCheckResult CheckMemory()
     {
-        var totalMemory = GC.GetTotalMemory(false);
+        var totalMemory = MemorySize.FromBytes(GC.GetTotalMemory(false));
         var memoryInfo = GC.GetGCMemoryInfo();
-        var totalAvailableMemory = memoryInfo.TotalAvailableMemoryBytes;
+        var totalAvailableMemory = MemorySize.FromBytes(memoryInfo.TotalAvailableMemoryBytes);
         
-        var memoryUsagePercentage = (double)totalMemory / totalAvailableMemory * 100;
+        var memoryUsagePercentage = (double)totalMemory.Bytes / totalAvailableMemory.Bytes * 100;
         
         var status = memoryUsagePercentage < 80 ? HealthStatus.Healthy : HealthStatus.Degraded;
         
         return new HealthCheckResult(
             status,
-            description: $"Memory usage: {memoryUsagePercentage:F2}% ({MemoryUnitConverter.FormatBytes(totalMemory)} / {MemoryUnitConverter.FormatBytes(totalAvailableMemory)})"
+            description: $"Memory usage: {memoryUsagePercentage:F2}% ({totalMemory} / {totalAvailableMemory})"
         );
     }
 
@@ -81,21 +76,5 @@ public static class HealthChecksExtensions
         var cpuUsageTotal = cpuUsedMs / (Environment.ProcessorCount * totalMsPassed);
 
         return (float)(cpuUsageTotal * 100);
-    }
-}
-
-public static class MemoryUnitConverter
-{
-    private static readonly string[] SizeSuffixes = { "B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB" };
-
-    public static string FormatBytes(long bytes)
-    {
-        if (bytes == 0)
-            return "0 B";
-
-        int magnitude = (int)Math.Log(bytes, 1024);
-        decimal adjustedSize = (decimal)bytes / (1L << (magnitude * 10));
-
-        return $"{adjustedSize:n2} {SizeSuffixes[magnitude]}";
     }
 }

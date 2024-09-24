@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
-
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -78,14 +77,11 @@ app.UseHttpsRedirection();
 app.UseCors(CorsOptionsConfigure.CorsPolicy);
 app.UseAuthentication();
 app.UseAuthorization();
-
-
 app.MapHealthChecks("/health", new HealthCheckOptions
 {
     ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
 });
 
-app.MapHealthChecksUI(options => options.UIPath = "/health-ui");
 app.MapControllers()
     .RequireAuthorization();
 
