@@ -20,4 +20,10 @@ RUN dotnet publish "API/API.csproj" -c Release -o /app/publish
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 COPY --from=build /app/publish .
-ENTRYPOINT ["dotnet", "API.dll"]
+
+# Copy the placeholder replacement script
+COPY replace_placeholders.sh .
+RUN chmod +x replace_placeholders.sh
+
+# Set the script as the entrypoint
+ENTRYPOINT ["./replace_placeholders.sh"]
