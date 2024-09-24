@@ -21,6 +21,9 @@ public static class DatabaseExtensions
         services.AddScoped<ILearningSystemRepository, LearningSystemRepository>();
         services.AddScoped<IQualificationRepository, QualificationRepository>();
         services.AddScoped<ISubjectRepository, SubjectRepository>();
+        services.AddScoped<IPersonRepository, PersonRepository>()
+            .AddScoped<ITutorRepository, TutorRepository>()
+            .AddScoped<IStudentRepository, StudentRepository>();
 
         return services;
     }

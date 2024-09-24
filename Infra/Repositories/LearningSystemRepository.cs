@@ -42,3 +42,16 @@ public class LearningSystemRepository(ApplicationDbContext context)
         );
     }
 }
+
+public class PersonRepository(ApplicationDbContext context) : Repository<Person>(context), IPersonRepository
+{
+    public async Task<Person?> GetByEmailAsync(string email, CancellationToken cancellationToken)
+    {
+        return await Context.Persons
+            .FirstOrDefaultAsync(p => EF.Functions.ILike(p.Email, email), cancellationToken);
+    }
+}
+
+public class TutorRepository(ApplicationDbContext context) : PersonRepository(context), ITutorRepository;
+
+public class StudentRepository(ApplicationDbContext context) : PersonRepository(context), IStudentRepository;
