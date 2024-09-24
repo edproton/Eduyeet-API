@@ -1,7 +1,10 @@
 using API.Middlewares;
+using API.Options;
 using Application;
 using Infra;
+using Infra.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
+using CorsOptions = Microsoft.AspNetCore.Cors.Infrastructure.CorsOptions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -44,6 +47,8 @@ builder.Services
     .AddApplication()
     .AddInfra(builder.Configuration);
 
+builder.Services.AddOptionsWithValidation<CorsOptions>();
+builder.Services.ConfigureOptions<CorsOptionsConfigure>();
 builder.Services.AddCors();
 
 var app = builder.Build();
@@ -62,12 +67,11 @@ if (app.Environment.IsDevelopment())
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "Your API V1");
         c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None);
-        // Add custom JavaScript to automatically prepend 'Bearer ' to the token input
     });
 }
 
 app.UseHttpsRedirection();
-
+app.UseCors(CorsOptionsConfigure.CorsPolicy);
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers()
