@@ -13,6 +13,6 @@ public static class DependencyInjection
             .AddConfigurationOptions()
             .AddDynamicDbContext<ApplicationDbContext>(configuration)
             .AddRepositories()
-            .AddIdentity(configuration);
+            .AddIdentity();
     }
 }

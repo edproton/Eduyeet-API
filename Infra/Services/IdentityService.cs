@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Encodings.Web;
 using Application.Features.CreatePerson;
+using Application.Repositories;
 using Application.Services;
 using ErrorOr;
 using Infra.ValueObjects;
@@ -16,6 +17,7 @@ public class IdentityService(
     IEmailSender<ApplicationUser> emailSender,
     LinkGenerator linkGenerator,
     IJwtService jwtService,
+    IPersonRepository personRepository,
     IHttpContextAccessor httpContextAccessor)
     : IIdentityService
 {
@@ -28,8 +30,14 @@ public class IdentityService(
         {
             return Error.Failure("EmailNotSupported", "User store doesn't support email.");
         }
+        
+        var userExists = await userManager.FindByEmailAsync(command.Email);
+        if (userExists != null)
+        {
+            return Error.Failure("EmailAlreadyRegistered", "Email already registered.");
+        }
 
-        var user = new ApplicationUser { UserName = command.Email, Email = command.Email, PersonId = personId };
+        var user = new ApplicationUser { UserName = command.Email, PersonId = personId, Email = command.Email };
         var result = await userManager.CreateAsync(user, command.Password);
         if (!result.Succeeded)
         {
@@ -136,7 +144,10 @@ public class IdentityService(
             }
         }
 
-        var token = jwtService.GenerateToken(user);
+        var person = await personRepository.GetByIdAsync(user.PersonId, httpContextRequestAborted);
+        user.Person = person ?? throw new InvalidOperationException("Person not found.");
+
+        var token = await jwtService.GenerateToken(user, httpContextRequestAborted);
 
         return new LoginResponse(token, "MOCK_REFRESH_TOKEN");
     }

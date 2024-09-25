@@ -22,7 +22,6 @@ public class Subject : BaseEntity
 public class Qualification : BaseEntity
 {
     public required string Name { get; set; }
-
-    public Guid SubjectId { get; set; }
+    public Guid QualificationId { get; set; }
     public required Subject Subject { get; set; }
 }

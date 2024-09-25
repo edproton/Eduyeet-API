@@ -16,14 +16,14 @@ public class QualificationRepository(ApplicationDbContext context)
         return await Context.Qualifications
             .FirstOrDefaultAsync(q =>
                     EF.Functions.ILike(q.Name, qualificationName) &&
-                    q.SubjectId == subjectId,
+                    q.QualificationId == subjectId,
                 cancellationToken);
     }
 
     public async Task<IEnumerable<Qualification>> GetBySubjectIdAsync(Guid subjectId, CancellationToken cancellationToken)
     {
         return await Context.Qualifications
-            .Where(q => q.SubjectId == subjectId)
+            .Where(q => q.QualificationId == subjectId)
             .ToListAsync(cancellationToken);
     }
 
@@ -31,5 +31,12 @@ public class QualificationRepository(ApplicationDbContext context)
     {
         return await Context.Qualifications
             .FirstOrDefaultAsync(q => EF.Functions.ILike(q.Name, qualificationName), cancellationToken);
+    }
+
+    public async Task<List<Qualification>> GetQualificationsByIdsAsync(List<Guid> qualificationIds, CancellationToken cancellationToken)
+    {
+        return await Context.Qualifications
+            .Where(q => qualificationIds.Contains(q.Id))
+            .ToListAsync(cancellationToken);
     }
 }

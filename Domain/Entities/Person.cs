@@ -9,8 +9,6 @@ public class Person : BaseEntity
 
     public required string Name { get; set; }
     
-    public required string Email { get; set; }
-
     public Person(PersonTypeEnum type)
     {
         Type = type;

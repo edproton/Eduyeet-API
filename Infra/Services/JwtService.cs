@@ -1,9 +1,11 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Application.Repositories;
+using Domain.Entities;
+using Domain.Enums;
 using Infra.Options;
 using Infra.ValueObjects;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
@@ -12,27 +14,42 @@ namespace Infra.Services;
 
 public interface IJwtService
 {
-    string GenerateToken(ApplicationUser user);
+    Task<string> GenerateToken(ApplicationUser user, CancellationToken cancellationToken);
     ClaimsPrincipal? ValidateToken(string token);
 }
 
-public class JwtService(IOptions<JwtOptions> jwtOptions) : IJwtService
+public class JwtService(IOptions<JwtOptions> jwtOptions, ITutorRepository tutorRepository) : IJwtService
 {
     private readonly JwtOptions _jwtOptions = jwtOptions.Value;
 
-    public string GenerateToken(ApplicationUser user)
+    public async Task<string> GenerateToken(ApplicationUser user, CancellationToken cancellationToken)
     {
         if (user.UserName == null)
         {
             throw new ArgumentNullException(nameof(user.UserName));
         }
 
-        var claims = new[]
+        var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.NameIdentifier, user.Id),
-            new Claim(ClaimTypes.Name, user.UserName),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new(ClaimTypes.NameIdentifier, user.Id),
+            new(ClaimTypes.Name, user.UserName),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new("type", user.Person.Type.ToString().ToLower()),
+            new("personId", user.PersonId.ToString())
         };
+        
+        if (user.Person.Type == PersonTypeEnum.Tutor)
+        {
+            var qualifications = await tutorRepository.GetByIdWithQualificationsAsync(user.PersonId, cancellationToken);
+            
+            if (qualifications is { AvailableQualifications.Count: > 0 })
+            {
+                foreach (var qualification in qualifications.AvailableQualifications)
+                {
+                    claims.Add(new Claim("qualifications", qualification.Id.ToString()));
+                }
+            }
+        }
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.Secret));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

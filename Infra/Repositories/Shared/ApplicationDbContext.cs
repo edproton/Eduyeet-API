@@ -12,8 +12,17 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<LearningSystem> LearningSystems { get; set; }
     public DbSet<Subject> Subjects { get; set; }
     public DbSet<Qualification> Qualifications { get; set; }
+    
+    public DbSet<Booking> Bookings { get; set; }
+    
+    public DbSet<Availability> Availabilities { get; set; }
+
     public DbSet<ApplicationUser> ApplicationUsers { get; set; }
     public DbSet<Person> Persons { get; set; }
+
+    public DbSet<Tutor> Tutors { get; set; }
+    
+    public DbSet<Student> Students { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -31,7 +40,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         {
             entity.HasMany(s => s.Qualifications)
                 .WithOne(q => q.Subject)
-                .HasForeignKey(q => q.SubjectId)
+                .HasForeignKey(q => q.QualificationId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
         

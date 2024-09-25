@@ -22,6 +22,57 @@ namespace Infra.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Domain.Entities.Availability", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Day")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TutorId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TutorId");
+
+                    b.ToTable("Availabilities");
+                });
+
+            modelBuilder.Entity("Domain.Entities.Booking", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("EndTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("QualificationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("StartTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TutorId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("QualificationId");
+
+                    b.HasIndex("StudentId");
+
+                    b.HasIndex("TutorId");
+
+                    b.ToTable("Bookings");
+                });
+
             modelBuilder.Entity("Domain.Entities.LearningSystem", b =>
                 {
                     b.Property<Guid>("Id")
@@ -43,9 +94,10 @@ namespace Infra.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Email")
+                    b.Property<string>("Discriminator")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -57,6 +109,10 @@ namespace Infra.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Persons");
+
+                    b.HasDiscriminator().HasValue("Person");
+
+                    b.UseTphMappingStrategy();
                 });
 
             modelBuilder.Entity("Domain.Entities.Qualification", b =>
@@ -69,12 +125,17 @@ namespace Infra.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<Guid>("SubjectId")
+                    b.Property<Guid>("QualificationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("TutorId")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SubjectId");
+                    b.HasIndex("QualificationId");
+
+                    b.HasIndex("TutorId");
 
                     b.ToTable("Qualifications");
                 });
@@ -97,6 +158,28 @@ namespace Infra.Migrations
                     b.HasIndex("LearningSystemId");
 
                     b.ToTable("Subjects");
+                });
+
+            modelBuilder.Entity("Domain.Entities.TimeSlot", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AvailabilityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<TimeSpan>("EndTime")
+                        .HasColumnType("interval");
+
+                    b.Property<TimeSpan>("StartTime")
+                        .HasColumnType("interval");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AvailabilityId");
+
+                    b.ToTable("TimeSlot");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -304,7 +387,21 @@ namespace Infra.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("Infra.Services.ApplicationUser", b =>
+            modelBuilder.Entity("Domain.Entities.Student", b =>
+                {
+                    b.HasBaseType("Domain.Entities.Person");
+
+                    b.HasDiscriminator().HasValue("Student");
+                });
+
+            modelBuilder.Entity("Domain.Entities.Tutor", b =>
+                {
+                    b.HasBaseType("Domain.Entities.Person");
+
+                    b.HasDiscriminator().HasValue("Tutor");
+                });
+
+            modelBuilder.Entity("Infra.ValueObjects.ApplicationUser", b =>
                 {
                     b.HasBaseType("Microsoft.AspNetCore.Identity.IdentityUser");
 
@@ -317,13 +414,55 @@ namespace Infra.Migrations
                     b.HasDiscriminator().HasValue("ApplicationUser");
                 });
 
+            modelBuilder.Entity("Domain.Entities.Availability", b =>
+                {
+                    b.HasOne("Domain.Entities.Tutor", "Tutor")
+                        .WithMany("Availabilities")
+                        .HasForeignKey("TutorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Tutor");
+                });
+
+            modelBuilder.Entity("Domain.Entities.Booking", b =>
+                {
+                    b.HasOne("Domain.Entities.Qualification", "Qualification")
+                        .WithMany()
+                        .HasForeignKey("QualificationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.Student", "Student")
+                        .WithMany("Bookings")
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.Tutor", "Tutor")
+                        .WithMany("Bookings")
+                        .HasForeignKey("TutorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Qualification");
+
+                    b.Navigation("Student");
+
+                    b.Navigation("Tutor");
+                });
+
             modelBuilder.Entity("Domain.Entities.Qualification", b =>
                 {
                     b.HasOne("Domain.Entities.Subject", "Subject")
                         .WithMany("Qualifications")
-                        .HasForeignKey("SubjectId")
+                        .HasForeignKey("QualificationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("Domain.Entities.Tutor", null)
+                        .WithMany("AvailableQualifications")
+                        .HasForeignKey("TutorId");
 
                     b.Navigation("Subject");
                 });
@@ -337,6 +476,13 @@ namespace Infra.Migrations
                         .IsRequired();
 
                     b.Navigation("LearningSystem");
+                });
+
+            modelBuilder.Entity("Domain.Entities.TimeSlot", b =>
+                {
+                    b.HasOne("Domain.Entities.Availability", null)
+                        .WithMany("TimeSlots")
+                        .HasForeignKey("AvailabilityId");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -390,15 +536,20 @@ namespace Infra.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Infra.Services.ApplicationUser", b =>
+            modelBuilder.Entity("Infra.ValueObjects.ApplicationUser", b =>
                 {
                     b.HasOne("Domain.Entities.Person", "Person")
                         .WithOne()
-                        .HasForeignKey("Infra.Services.ApplicationUser", "PersonId")
+                        .HasForeignKey("Infra.ValueObjects.ApplicationUser", "PersonId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Person");
+                });
+
+            modelBuilder.Entity("Domain.Entities.Availability", b =>
+                {
+                    b.Navigation("TimeSlots");
                 });
 
             modelBuilder.Entity("Domain.Entities.LearningSystem", b =>
@@ -409,6 +560,20 @@ namespace Infra.Migrations
             modelBuilder.Entity("Domain.Entities.Subject", b =>
                 {
                     b.Navigation("Qualifications");
+                });
+
+            modelBuilder.Entity("Domain.Entities.Student", b =>
+                {
+                    b.Navigation("Bookings");
+                });
+
+            modelBuilder.Entity("Domain.Entities.Tutor", b =>
+                {
+                    b.Navigation("Availabilities");
+
+                    b.Navigation("AvailableQualifications");
+
+                    b.Navigation("Bookings");
                 });
 #pragma warning restore 612, 618
         }

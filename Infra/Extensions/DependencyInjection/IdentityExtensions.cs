@@ -5,14 +5,14 @@ using Infra.Services;
 using Infra.ValueObjects;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Infra.Extensions.DependencyInjection;
 
 public static class IdentityExtensions
 {
-    public static IServiceCollection AddIdentity(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddIdentity(this IServiceCollection services)
     {
         services.AddAuthentication(op =>
             {
@@ -35,7 +35,15 @@ public static class IdentityExtensions
         services
             .AddScoped<IJwtService, JwtService>()
             .AddScoped<IIdentityService, IdentityService>()
-            .AddScoped<IEmailSender<ApplicationUser>, EmailSender>();
+            .AddScoped<DevEmailSender>()
+            .AddScoped<EmailSender>()
+            .AddScoped<IEmailSender<ApplicationUser>>(sp =>
+            {
+                var environmentOptions = sp.GetRequiredService<IOptions<EnvironmentOptions>>().Value;
+                return environmentOptions.IsDevelopment
+                    ? sp.GetRequiredService<DevEmailSender>()
+                    : sp.GetRequiredService<EmailSender>();
+            });
 
         return services;
     }

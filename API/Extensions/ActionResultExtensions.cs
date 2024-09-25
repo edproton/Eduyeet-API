@@ -1,6 +1,5 @@
 using API.Models;
 using ErrorOr;
-using Microsoft.AspNetCore.Mvc;
 
 namespace API.Extensions;
 

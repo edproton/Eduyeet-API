@@ -5,6 +5,7 @@ namespace Application.Repositories.Shared;
 public interface IRepository<T> where T : BaseEntity
 {
     Task<T?> GetByIdAsync(Guid id, CancellationToken cancellationToken);
+
     Task<PaginatedResponse<T>> GetAllAsync(
         int skip,
         int take,

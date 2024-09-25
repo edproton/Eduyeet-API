@@ -1,10 +1,7 @@
-using System;
 using System.Diagnostics;
-using System.Threading;
 using API.Utils;
 using Infra.Options;
 using Infra.Repositories.Shared;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 

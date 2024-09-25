@@ -1,7 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using Infra.Options;
 using Microsoft.Extensions.Options;
-using Npgsql;
 
 namespace API.Options;
 

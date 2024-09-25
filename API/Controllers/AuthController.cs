@@ -1,10 +1,7 @@
-using API.Extensions;
 using Application.Features.CreatePerson;
 using Application.Services;
 using ErrorOr;
-using MediatR;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers;
 

@@ -33,7 +33,6 @@ public class CreatePersonCommandValidator : AbstractValidator<CreatePersonComman
 
 public class CreatePersonCommandHandler(
     IUnitOfWork unitOfWork,
-    IPersonRepository personRepository,
     ITutorRepository tutorRepository,
     IStudentRepository studentRepository,
     IIdentityService identityService)
@@ -43,29 +42,23 @@ public class CreatePersonCommandHandler(
         CreatePersonCommand request,
         CancellationToken cancellationToken)
     {
-        var existingPerson = await personRepository.GetByEmailAsync(request.Email, cancellationToken);
-        if (existingPerson != null)
-        {
-            return Error.Conflict(
-                "UserEmailAlreadyRegistered",
-                $"The email '{request.Email}' is already registered.");
-        }
-
         Person person = request.Type switch
         {
-            PersonTypeEnum.Tutor => new Tutor { Name = request.Name, Email = request.Email },
-            PersonTypeEnum.Student => new Student { Name = request.Name, Email = request.Email },
+            PersonTypeEnum.Tutor => new Tutor { Name = request.Name },
+            PersonTypeEnum.Student => new Student { Name = request.Name },
             _ => throw new ArgumentException("Invalid person type", nameof(request.Type))
         };
-
+        
         switch (request.Type)
         {
             case PersonTypeEnum.Tutor:
-                await tutorRepository.AddAsync(person as Tutor, cancellationToken);
+                await tutorRepository.AddAsync((person as Tutor)!, cancellationToken);
                 break;
             case PersonTypeEnum.Student:
-                await studentRepository.AddAsync(person as Student, cancellationToken);
+                await studentRepository.AddAsync((person as Student)!, cancellationToken);
                 break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(request.Type), request.Type, "Invalid person type");
         }
 
         var registrationResult = await identityService.RegisterUserAsync(

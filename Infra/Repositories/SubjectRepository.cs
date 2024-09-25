@@ -7,11 +7,11 @@ namespace Infra.Repositories;
 
 public class SubjectRepository(ApplicationDbContext context) : Repository<Subject>(context), ISubjectRepository
 {
-    public async Task<Subject?> GetByIdWithQualificationsAsync(Guid id)
+    public async Task<Subject?> GetByIdWithQualificationsAsync(Guid id, CancellationToken cancellationToken)
     {
         return await Context.Subjects
             .Include(s => s.Qualifications)
-            .FirstOrDefaultAsync(s => s.Id == id);
+            .FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
     }
 
     public async Task<Subject?> GetByNameAndSystemIdAsync(

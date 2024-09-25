@@ -1,5 +1,3 @@
-using System;
-
 namespace API.Utils;
 
 public readonly struct MemorySize : IFormattable
@@ -45,8 +43,8 @@ public readonly struct MemorySize : IFormattable
             if (Bytes == 0)
                 return "0 B";
 
-            int magnitude = (int)Math.Log(Bytes, 1024);
-            decimal adjustedSize = (decimal)Bytes / (1L << (magnitude * 10));
+            var magnitude = (int)Math.Log(Bytes, 1024);
+            var adjustedSize = (decimal)Bytes / (1L << (magnitude * 10));
 
             return $"{adjustedSize:n2} {SizeSuffixes[magnitude]}";
         }

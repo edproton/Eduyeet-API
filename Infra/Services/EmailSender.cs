@@ -49,8 +49,8 @@ public class EmailSender(ILogger<EmailSender> logger, IOptions<SmtpOptions> smpt
         string email,
         string confirmationLink)
     {
-        string subject = "Confirm your account";
-        string body = $"Please confirm your account by <a href='{confirmationLink}'>clicking here</a>.";
+        var subject = "Confirm your account";
+        var body = $"Please confirm your account by <a href='{confirmationLink}'>clicking here</a>.";
         await SendEmailAsync(email, subject, body);
     }
 
@@ -59,8 +59,8 @@ public class EmailSender(ILogger<EmailSender> logger, IOptions<SmtpOptions> smpt
         string email,
         string resetLink)
     {
-        string subject = "Reset your password";
-        string body = $"Please reset your password by <a href='{resetLink}'>clicking here</a>.";
+        var subject = "Reset your password";
+        var body = $"Please reset your password by <a href='{resetLink}'>clicking here</a>.";
         await SendEmailAsync(email, subject, body);
     }
 
@@ -69,8 +69,8 @@ public class EmailSender(ILogger<EmailSender> logger, IOptions<SmtpOptions> smpt
         string email,
         string resetCode)
     {
-        string subject = "Your password reset code";
-        string body = $"Your password reset code is: <strong>{resetCode}</strong>";
+        var subject = "Your password reset code";
+        var body = $"Your password reset code is: <strong>{resetCode}</strong>";
         await SendEmailAsync(email, subject, body);
     }
 }

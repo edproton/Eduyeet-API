@@ -14,9 +14,7 @@ public class CreateLearningSystemCommandValidator : AbstractValidator<CreateLear
 
 public class Handler(
     IUnitOfWork unitOfWork,
-    ILearningSystemRepository systemRepository,
-    ISubjectRepository subjectRepository,
-    IQualificationRepository qualificationRepository)
+    ILearningSystemRepository systemRepository)
     : IRequestHandler<CreateLearningSystemCommand, ErrorOr<CreateLearningSystemCommandResponse>>
 {
     public async Task<ErrorOr<CreateLearningSystemCommandResponse>> Handle(

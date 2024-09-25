@@ -19,9 +19,11 @@ public static class DatabaseExtensions
         services.AddScoped<ILearningSystemRepository, LearningSystemRepository>();
         services.AddScoped<IQualificationRepository, QualificationRepository>();
         services.AddScoped<ISubjectRepository, SubjectRepository>();
-        services.AddScoped<IPersonRepository, PersonRepository>()
-            .AddScoped<ITutorRepository, TutorRepository>()
-            .AddScoped<IStudentRepository, StudentRepository>();
+        services.AddScoped<ITutorRepository, TutorRepository>()
+            .AddScoped<IStudentRepository, StudentRepository>()
+            .AddScoped<IAvailabilityRepository, AvailabilityRepository>()
+            .AddScoped<IBookingRepository, BookingRepository>()
+            .AddScoped<IPersonRepository, PersonRepository>();
 
         return services;
     }
