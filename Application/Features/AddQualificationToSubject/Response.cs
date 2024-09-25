@@ -1,3 +1,0 @@
-namespace Application.Features.AddQualificationToSubject;
-
-public record AddQualificationToSubjectCommandResponse(Guid SubjectId);
