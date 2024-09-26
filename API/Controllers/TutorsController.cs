@@ -33,7 +33,7 @@ public class TutorsController(ISender mediator) : ControllerBase
 
         return result.ToHttpActionResult();
     }
-    
+
     [HttpGet("{tutorId:guid}")]
     public async Task<ActionResult> GetTutorWithQualificationsAndAvailability(Guid tutorId)
     {

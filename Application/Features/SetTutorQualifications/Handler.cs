@@ -36,7 +36,7 @@ public class SetTutorQualificationsHandler(
         }
 
         tutor.AvailableQualifications = qualifications;
-        tutor.AvailableQualificationsIds = qualifications.Select(q => q.Id).ToList();
+
         await tutorRepository.UpdateAsync(tutor, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 

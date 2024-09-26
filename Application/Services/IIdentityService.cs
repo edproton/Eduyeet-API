@@ -42,4 +42,4 @@ public record GetMeResponse(
     string Name,
     PersonTypeEnum Type,
     bool EmailConfirmed,
-    IEnumerable<Guid> Qualifications);
+    IEnumerable<Guid> QualificationsIds);

@@ -1,9 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using Application.Repositories;
-using Domain.Entities;
-using Domain.Enums;
 using Infra.Options;
 using Infra.ValueObjects;
 using Microsoft.Extensions.Options;
@@ -41,7 +38,7 @@ public class JwtService(IOptions<JwtOptions> jwtOptions, IUserService userServic
         var qualificationIds = await userService.GetUserQualificationIds(user.PersonId, user.Person.Type, cancellationToken);
         foreach (var qualificationId in qualificationIds)
         {
-            claims.Add(new Claim("qualifications", qualificationId.ToString()));
+            claims.Add(new Claim("qualificationsIds", qualificationId.ToString()));
         }
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.Secret));

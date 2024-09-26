@@ -21,6 +21,12 @@ public class TutorRepository(ApplicationDbContext context) : Repository<Tutor>(c
         var tutor = await Context.Tutors
             .Include(t => t.AvailableQualifications)
             .FirstOrDefaultAsync(t => t.Id == personId, cancellationToken);
+        
+        if (tutor != null)
+        {
+            tutor.AvailableQualifications ??= [];
+            tutor.AvailableQualificationsIds = tutor.AvailableQualifications.Select(q => q.Id).ToList();
+        }
 
         return tutor;
     }
