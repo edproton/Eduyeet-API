@@ -12,11 +12,28 @@ public enum EnvironmentType
 public class EnvironmentOptions
 {
     [Required]
-    public EnvironmentType Environment { get; set; }
+    public string Type
+    {
+        get => EnvironmentType.ToString();
+        set
+        {
+            if (Enum.TryParse<EnvironmentType>(value, true, out var parsedType))
+            {
+                EnvironmentType = parsedType;
+            }
+            else
+            {
+                throw new ArgumentException(
+                    $"Invalid environment type: {value}. Must be one of: {string.Join(", ", Enum.GetNames<EnvironmentType>())}");
+            }
+        }
+    }
+
+    public EnvironmentType EnvironmentType { get; private set; }
+
+    public bool IsDevelopment => EnvironmentType == EnvironmentType.Development;
     
-    public bool IsDevelopment => Environment == EnvironmentType.Development;
+    public bool IsStaging => EnvironmentType == EnvironmentType.Staging;
     
-    public bool IsStaging => Environment == EnvironmentType.Staging;
-    
-    public bool IsProduction => Environment == EnvironmentType.Production;
+    public bool IsProduction => EnvironmentType == EnvironmentType.Production;
 }

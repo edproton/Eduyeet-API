@@ -24,7 +24,7 @@ public static class IdentityExtensions
                 op.DefaultForbidScheme = JwtBearerDefaults.AuthenticationScheme;
             })
             .AddJwtBearer();
-        
+
         services.ConfigureOptions<JwtOptionsConfigure>();
 
         services.AddIdentityCore<ApplicationUser>()
@@ -35,14 +35,20 @@ public static class IdentityExtensions
         services
             .AddScoped<IJwtService, JwtService>()
             .AddScoped<IIdentityService, IdentityService>()
-            .AddScoped<DevEmailSender>()
             .AddScoped<EmailSender>()
+            .AddScoped<DevEmailSender>()
             .AddScoped<IEmailSender<ApplicationUser>>(sp =>
             {
                 var environmentOptions = sp.GetRequiredService<IOptions<EnvironmentOptions>>().Value;
-                return environmentOptions.IsDevelopment
-                    ? sp.GetRequiredService<DevEmailSender>()
-                    : sp.GetRequiredService<EmailSender>();
+
+                return environmentOptions.EnvironmentType switch
+                {
+                    EnvironmentType.Development => sp.GetRequiredService<DevEmailSender>(),
+                    EnvironmentType.Staging => sp.GetRequiredService<EmailSender>(),
+                    EnvironmentType.Production => sp.GetRequiredService<EmailSender>(),
+                    _ => throw new ArgumentOutOfRangeException(nameof(environmentOptions.EnvironmentType),
+                        $"Not expected environment type: {environmentOptions.Type}")
+                };
             });
 
         return services;
