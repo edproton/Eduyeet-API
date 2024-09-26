@@ -11,7 +11,7 @@ public class StudentRepository(ApplicationDbContext context) : Repository<Studen
     {
         return await Context.Students
             .Where(t => t.Id == studentId)
-            .SelectMany(t => t.InterestedQualificationsIds)
+            .SelectMany(t => t.InterestedQualifications.Select(q => q.Id))
             .ToListAsync(cancellationToken);
     }
 }

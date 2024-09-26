@@ -1,14 +1,14 @@
 namespace Application.Features.SetTutorQualifications;
 
 public record SetTutorQualificationsCommand(
-    Guid TutorId,
+    Guid PersonId,
     List<Guid> QualificationIds) : IRequest<ErrorOr<SetTutorQualificationsResponse>>;
 
 public class SetTutorQualificationsCommandValidator : AbstractValidator<SetTutorQualificationsCommand>
 {
     public SetTutorQualificationsCommandValidator()
     {
-        RuleFor(c => c.TutorId).NotEmpty().WithMessage("Tutor ID is required.");
+        RuleFor(c => c.PersonId).NotEmpty().WithMessage("Tutor ID is required.");
         RuleFor(c => c.QualificationIds).NotEmpty().WithMessage("At least one qualification is required.");
     }
 }
@@ -23,10 +23,10 @@ public class SetTutorQualificationsHandler(
         SetTutorQualificationsCommand request,
         CancellationToken cancellationToken)
     {
-        var tutor = await tutorRepository.GetByIdWithQualificationsAsync(request.TutorId, cancellationToken);
+        var tutor = await tutorRepository.GetByIdWithQualificationsAsync(request.PersonId, cancellationToken);
         if (tutor == null)
         {
-            return Error.NotFound("TutorNotFound", $"A tutor with the ID '{request.TutorId}' was not found.");
+            return Error.NotFound("TutorNotFound", $"A tutor with the ID '{request.PersonId}' was not found.");
         }
 
         var qualifications = await qualificationRepository.GetQualificationsByIdsAsync(request.QualificationIds, cancellationToken);
@@ -36,7 +36,7 @@ public class SetTutorQualificationsHandler(
         }
 
         tutor.AvailableQualifications = qualifications;
-
+        tutor.AvailableQualificationsIds = qualifications.Select(q => q.Id).ToList();
         await tutorRepository.UpdateAsync(tutor, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 

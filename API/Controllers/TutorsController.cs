@@ -8,10 +8,10 @@ namespace API.Controllers;
 [Route("api/tutors")]
 public class TutorsController(ISender mediator) : ControllerBase
 {
-    [HttpPost("{tutorId:guid}/qualifications")]
-    public async Task<ActionResult> SetTutorQualifications(Guid tutorId, SetTutorQualificationsCommand command)
+    [HttpPost("{personId:guid}/qualifications")]
+    public async Task<ActionResult> SetTutorQualifications(Guid personId, SetTutorQualificationsCommand command)
     {
-        if (tutorId != command.TutorId)
+        if (personId != command.PersonId)
         {
             return BadRequest("The tutor ID in the URL does not match the ID in the command.");
         }

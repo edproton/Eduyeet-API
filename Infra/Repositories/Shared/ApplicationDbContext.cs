@@ -49,50 +49,10 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .WithOne()
             .HasForeignKey<ApplicationUser>(au => au.PersonId);
         
-        modelBuilder.Entity<Tutor>(entity =>
-        {
-            entity.HasMany(t => t.AvailableQualifications)
-                .WithMany()
-                .UsingEntity<Dictionary<string, object>>(
-                    "TutorQualification",
-                    j => j
-                        .HasOne<Qualification>()
-                        .WithMany()
-                        .HasForeignKey("QualificationId"),
-                    j => j
-                        .HasOne<Tutor>()
-                        .WithMany()
-                        .HasForeignKey("TutorId"),
-                    j =>
-                    {
-                        j.HasKey("TutorId", "QualificationId");
-                        j.ToTable("TutorQualifications");
-                    });
-
-            entity.Ignore(t => t.AvailableQualificationsIds);
-        });
-
-        modelBuilder.Entity<Student>(entity =>
-        {
-            entity.HasMany(s => s.InterestedQualifications)
-                .WithMany()
-                .UsingEntity<Dictionary<string, object>>(
-                    "StudentQualification",
-                    j => j
-                        .HasOne<Qualification>()
-                        .WithMany()
-                        .HasForeignKey("QualificationId"),
-                    j => j
-                        .HasOne<Student>()
-                        .WithMany()
-                        .HasForeignKey("StudentId"),
-                    j =>
-                    {
-                        j.HasKey("StudentId", "QualificationId");
-                        j.ToTable("StudentQualifications");
-                    });
-
-            entity.Ignore(s => s.InterestedQualificationsIds);
-        });
+        modelBuilder.Entity<Person>()
+            .HasDiscriminator<string>("Discriminator")
+            .HasValue<Person>("Person")
+            .HasValue<Tutor>("Tutor")
+            .HasValue<Student>("Student");
     }
 }

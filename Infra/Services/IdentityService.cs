@@ -170,9 +170,11 @@ public class IdentityService(
         var qualifications = await GetQualificationIds(person, cancellationToken);
 
         return new GetMeResponse(
+            existingUser.Id,
             existingUser.PersonId,
             existingUser.Email!,
             existingUser.Person.Name,
+            existingUser.Person.Type,
             existingUser.EmailConfirmed,
             qualifications);
     }

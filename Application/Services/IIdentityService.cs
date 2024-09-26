@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Application.Features.CreatePerson;
+using Domain.Enums;
 
 namespace Application.Services;
 
@@ -35,8 +36,10 @@ public record LoginResponse(
     string RefreshToken);
     
 public record GetMeResponse(
-    Guid Id,
+    string Id,
+    Guid PersonId,
     string Email,
     string Name,
+    PersonTypeEnum Type,
     bool EmailConfirmed,
     IEnumerable<Guid> Qualifications);
