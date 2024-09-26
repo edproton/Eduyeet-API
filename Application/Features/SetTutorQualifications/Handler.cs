@@ -23,7 +23,7 @@ public class SetTutorQualificationsHandler(
         SetTutorQualificationsCommand request,
         CancellationToken cancellationToken)
     {
-        var tutor = await tutorRepository.GetByIdAsync(request.TutorId, cancellationToken);
+        var tutor = await tutorRepository.GetByIdWithQualificationsAsync(request.TutorId, cancellationToken);
         if (tutor == null)
         {
             return Error.NotFound("TutorNotFound", $"A tutor with the ID '{request.TutorId}' was not found.");
@@ -36,6 +36,7 @@ public class SetTutorQualificationsHandler(
         }
 
         tutor.AvailableQualifications = qualifications;
+
         await tutorRepository.UpdateAsync(tutor, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 

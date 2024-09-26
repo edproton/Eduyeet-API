@@ -1,8 +1,10 @@
+using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
 using Application.Features.CreatePerson;
 using Application.Repositories;
 using Application.Services;
+using Domain.Entities;
 using ErrorOr;
 using Infra.ValueObjects;
 using Microsoft.AspNetCore.Http;
@@ -18,6 +20,8 @@ public class IdentityService(
     LinkGenerator linkGenerator,
     IJwtService jwtService,
     IPersonRepository personRepository,
+    ITutorRepository tutorRepository,
+    IStudentRepository studentRepository,
     IHttpContextAccessor httpContextAccessor)
     : IIdentityService
 {
@@ -30,7 +34,7 @@ public class IdentityService(
         {
             return Error.Failure("EmailNotSupported", "User store doesn't support email.");
         }
-        
+
         var userExists = await userManager.FindByEmailAsync(command.Email);
         if (userExists != null)
         {
@@ -102,7 +106,7 @@ public class IdentityService(
 
     public async Task<ErrorOr<LoginResponse>> LoginAsync(
         LoginRequest login,
-        CancellationToken httpContextRequestAborted)
+        CancellationToken cancellationToken)
     {
         var user = await userManager.FindByEmailAsync(login.Email);
         if (user == null)
@@ -144,12 +148,33 @@ public class IdentityService(
             }
         }
 
-        var person = await personRepository.GetByIdAsync(user.PersonId, httpContextRequestAborted);
+        var person = await personRepository.GetByIdAsync(user.PersonId, cancellationToken);
         user.Person = person ?? throw new InvalidOperationException("Person not found.");
 
-        var token = await jwtService.GenerateToken(user, httpContextRequestAborted);
+        var token = await jwtService.GenerateToken(user, cancellationToken);
 
         return new LoginResponse(token, "MOCK_REFRESH_TOKEN");
+    }
+
+    public async Task<ErrorOr<GetMeResponse>> GetMeAsync(ClaimsPrincipal user, CancellationToken cancellationToken)
+    {
+        var existingUser = await userManager.GetUserAsync(user);
+        if (existingUser == null)
+        {
+            throw new InvalidOperationException("User not found.");
+        }
+
+        var person = await personRepository.GetByIdAsync(existingUser.PersonId, cancellationToken);
+        existingUser.Person = person ?? throw new InvalidOperationException("Person not found.");
+
+        var qualifications = await GetQualificationIds(person, cancellationToken);
+
+        return new GetMeResponse(
+            existingUser.PersonId,
+            existingUser.Email!,
+            existingUser.Person.Name,
+            existingUser.EmailConfirmed,
+            qualifications);
     }
 
     private async Task SendConfirmationEmailAsync(
@@ -180,5 +205,18 @@ public class IdentityService(
                               ?? throw new InvalidOperationException("Could not generate confirmation email URL.");
 
         await emailSender.SendConfirmationLinkAsync(user, email, HtmlEncoder.Default.Encode(confirmEmailUrl));
+    }
+
+    private async Task<IEnumerable<Guid>> GetQualificationIds(Person person, CancellationToken cancellationToken)
+    {
+        var qualificationIds = person switch
+        {
+            Student student => await studentRepository.GetQualificationIdsAsync(student.Id, cancellationToken),
+            Tutor tutor => await tutorRepository.GetQualificationIdsAsync(tutor.Id, cancellationToken),
+            _ => throw new InvalidOperationException($"Invalid person type: {person.GetType().Name}")
+        };
+
+        return qualificationIds ??
+               throw new InvalidOperationException($"{person.GetType().Name} not found or has no qualifications.");
     }
 }
