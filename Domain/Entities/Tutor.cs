@@ -3,18 +3,25 @@ using Domain.Enums;
 
 namespace Domain.Entities;
 
-public class Tutor() : Person(PersonTypeEnum.Tutor)
+public class Tutor() : Person(PersonTypeEnum.Tutor), IHasQualifications
 {
     public List<Qualification> AvailableQualifications { get; set; } = [];
-    
+    public List<Guid> AvailableQualificationsIds { get; set; } = [];
+
     public List<Availability> Availabilities { get; set; } = [];
-    
+
     public List<Booking> Bookings { get; set; } = [];
+
+    public IEnumerable<Guid> GetQualificationIds() => AvailableQualificationsIds;
 }
 
-public class Student() : Person(PersonTypeEnum.Student)
+public class Student() : Person(PersonTypeEnum.Student), IHasQualifications
 {
     public List<Booking> Bookings { get; set; } = [];
+    public List<Qualification> InterestedQualifications { get; set; } = [];
+    public List<Guid> InterestedQualificationsIds { get; set; } = [];
+
+    public IEnumerable<Guid> GetQualificationIds() => InterestedQualificationsIds;
 }
 
 public class Availability : BaseEntity

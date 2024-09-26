@@ -18,7 +18,7 @@ public interface IJwtService
     ClaimsPrincipal? ValidateToken(string token);
 }
 
-public class JwtService(IOptions<JwtOptions> jwtOptions, ITutorRepository tutorRepository) : IJwtService
+public class JwtService(IOptions<JwtOptions> jwtOptions, IUserService userService) : IJwtService
 {
     private readonly JwtOptions _jwtOptions = jwtOptions.Value;
 
@@ -38,17 +38,10 @@ public class JwtService(IOptions<JwtOptions> jwtOptions, ITutorRepository tutorR
             new("personId", user.PersonId.ToString())
         };
         
-        if (user.Person.Type == PersonTypeEnum.Tutor)
+        var qualificationIds = await userService.GetUserQualificationIds(user.PersonId, user.Person.Type, cancellationToken);
+        foreach (var qualificationId in qualificationIds)
         {
-            var qualifications = await tutorRepository.GetByIdWithQualificationsAsync(user.PersonId, cancellationToken);
-            
-            if (qualifications is { AvailableQualifications.Count: > 0 })
-            {
-                foreach (var qualification in qualifications.AvailableQualifications)
-                {
-                    claims.Add(new Claim("qualifications", qualification.Id.ToString()));
-                }
-            }
+            claims.Add(new Claim("qualifications", qualificationId.ToString()));
         }
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.Secret));

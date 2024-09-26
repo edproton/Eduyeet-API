@@ -1,7 +1,13 @@
+using Application.Services;
 using Infra.Extensions.DependencyInjection;
+using Infra.Options;
 using Infra.Repositories.Shared;
+using Infra.Services;
+using Infra.ValueObjects;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Infra;
 
@@ -13,6 +19,7 @@ public static class DependencyInjection
             .AddConfigurationOptions()
             .AddDynamicDbContext<ApplicationDbContext>(configuration)
             .AddRepositories()
+            .AddServices()
             .AddIdentity();
     }
 }

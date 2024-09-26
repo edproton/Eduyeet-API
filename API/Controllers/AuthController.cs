@@ -21,6 +21,15 @@ public class AuthController(
         return result.ToHttpActionResult();
     }
     
+    [Authorize]
+    [HttpGet("me")]
+    public async Task<ActionResult<ErrorOr<GetMeResponse>>> GetMeAsync()
+    {
+        var result = await identityService.GetMeAsync(User, HttpContext.RequestAborted);
+
+        return result.ToHttpActionResult();
+    }
+    
     [HttpPost("register")]
     public async Task<ActionResult<ErrorOr<Created>>> RegisterPersonAsync(
         [FromBody] CreatePersonCommand request)

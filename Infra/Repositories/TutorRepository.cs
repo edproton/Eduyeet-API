@@ -7,17 +7,6 @@ namespace Infra.Repositories;
 
 public class TutorRepository(ApplicationDbContext context) : Repository<Tutor>(context), ITutorRepository
 {
-    public async Task<bool> HasQualificationForSubjectAsync(
-        Guid tutorId,
-        Guid subjectId,
-        CancellationToken cancellationToken)
-    {
-        return await Context.Tutors
-            .Where(t => t.Id == tutorId)
-            .SelectMany(t => t.AvailableQualifications)
-            .AnyAsync(q => q.QualificationId == subjectId, cancellationToken);
-    }
-
     public async Task<Tutor?> GetByIdWithQualificationsAsync(Guid tutorId, CancellationToken cancellationToken)
     {
         return await Context.Tutors
@@ -25,6 +14,15 @@ public class TutorRepository(ApplicationDbContext context) : Repository<Tutor>(c
             .FirstOrDefaultAsync(t => t.Id == tutorId, cancellationToken);
     }
 
+    public async Task<IEnumerable<Guid>> GetQualificationIdsAsync(Guid tutorId, CancellationToken cancellationToken)
+    {
+        var tutor = await Context.Tutors
+            .Where(t => t.Id == tutorId)
+            .Select(t => new { t.AvailableQualificationsIds })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return tutor?.AvailableQualificationsIds ?? Enumerable.Empty<Guid>();
+    }
     public async Task<Tutor?> GetByIdWithQualificationsAndAvailabilitiesAsync(Guid tutorId, CancellationToken cancellationToken)
     {
         return await Context.Tutors

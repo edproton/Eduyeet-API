@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Application.Features.CreatePerson;
 
 namespace Application.Services;
@@ -14,7 +15,9 @@ public interface IIdentityService
         string code,
         string? changedEmail);
 
-    Task<ErrorOr<LoginResponse>> LoginAsync(LoginRequest login, CancellationToken httpContextRequestAborted);
+    Task<ErrorOr<LoginResponse>> LoginAsync(LoginRequest login, CancellationToken cancellationToken);
+
+    Task<ErrorOr<GetMeResponse>> GetMeAsync(ClaimsPrincipal user, CancellationToken cancellationToken);
 }
 
 public class LoginRequest
@@ -30,3 +33,10 @@ public class LoginRequest
 public record LoginResponse(
     string Token,
     string RefreshToken);
+    
+public record GetMeResponse(
+    Guid Id,
+    string Email,
+    string Name,
+    bool EmailConfirmed,
+    IEnumerable<Guid> Qualifications);
