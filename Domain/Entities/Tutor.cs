@@ -3,25 +3,19 @@ using Domain.Enums;
 
 namespace Domain.Entities;
 
-public class Tutor() : Person(PersonTypeEnum.Tutor), IHasQualifications
+public class Tutor() : Person(PersonTypeEnum.Tutor)
 {
     public List<Qualification> AvailableQualifications { get; set; } = [];
-    public List<Guid> AvailableQualificationsIds { get; set; } = [];
 
     public List<Availability> Availabilities { get; set; } = [];
 
     public List<Booking> Bookings { get; set; } = [];
-
-    public IEnumerable<Guid> GetQualificationIds() => AvailableQualificationsIds;
 }
 
-public class Student() : Person(PersonTypeEnum.Student), IHasQualifications
+public class Student() : Person(PersonTypeEnum.Student)
 {
     public List<Booking> Bookings { get; set; } = [];
     public List<Qualification> InterestedQualifications { get; set; } = [];
-    public List<Guid> InterestedQualificationsIds { get; set; } = [];
-
-    public IEnumerable<Guid> GetQualificationIds() => InterestedQualificationsIds;
 }
 
 public class Availability : BaseEntity
@@ -31,10 +25,20 @@ public class Availability : BaseEntity
     public DayOfWeek Day { get; set; }
     public List<TimeSlot> TimeSlots { get; set; } = new();
 
-    public bool IsAvailableAt(DateTime dateTime)
+    public bool IsAvailableAt(DateTime utcDateTime)
     {
-        return dateTime.DayOfWeek == Day &&
-               TimeSlots.Any(slot => slot.Contains(dateTime.TimeOfDay));
+        if (utcDateTime.Kind != DateTimeKind.Utc)
+        {
+            throw new ArgumentException("DateTime must be in UTC", nameof(utcDateTime));
+        }
+
+        if (utcDateTime.DayOfWeek != Day)
+        {
+            return false;
+        }
+
+        var timeOfDay = utcDateTime.TimeOfDay;
+        return TimeSlots.Any(slot => slot.Contains(timeOfDay));
     }
 }
 
@@ -45,7 +49,17 @@ public class TimeSlot : BaseEntity
 
     public bool Contains(TimeSpan time)
     {
-        return time >= StartTime && time.Add(TimeSpan.FromMinutes(55)) <= EndTime;
+        if (EndTime > StartTime)
+        {
+            return time >= StartTime && time < EndTime;
+        }
+    
+        return time >= StartTime || time < EndTime;
+    }
+
+    public bool ContainsRange(TimeSpan start, TimeSpan end)
+    {
+        return Contains(start) && (Contains(end) || end == TimeSpan.FromHours(24));
     }
 }
 
@@ -57,11 +71,18 @@ public class Booking : BaseEntity
     public required Tutor Tutor { get; set; }
     public Guid QualificationId { get; set; }
     public required Qualification Qualification { get; set; }
-    public DateTime StartTime { get; set; }
-    public DateTime EndTime { get; set; }
 
-    public bool IsValid(List<Availability> tutorAvailabilities)
+    private DateTime _startTime;
+    public DateTime StartTime
     {
-        return tutorAvailabilities.Any(a => a.IsAvailableAt(StartTime));
+        get => _startTime;
+        set => _startTime = DateTime.SpecifyKind(value, DateTimeKind.Utc);
+    }
+
+    private DateTime _endTime;
+    public DateTime EndTime
+    {
+        get => _endTime;
+        set => _endTime = DateTime.SpecifyKind(value, DateTimeKind.Utc);
     }
 }

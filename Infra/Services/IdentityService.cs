@@ -5,6 +5,7 @@ using Application.Features.CreatePerson;
 using Application.Repositories;
 using Application.Services;
 using Domain.Entities;
+using Domain.Enums;
 using ErrorOr;
 using Infra.ValueObjects;
 using Microsoft.AspNetCore.Http;
@@ -164,10 +165,19 @@ public class IdentityService(
             throw new InvalidOperationException("User not found.");
         }
 
-        var person = await personRepository.GetByIdAsync(existingUser.PersonId, cancellationToken);
+        var person = await GetPerson(existingUser.PersonId, cancellationToken);
         existingUser.Person = person ?? throw new InvalidOperationException("Person not found.");
 
-        var qualifications = await GetQualificationIds(person, cancellationToken);
+        var metadata = new Metadata
+        {
+            IsAvailabilityConfigured = person is Tutor { Availabilities.Count: > 0 } ? true : null,
+            IsQualificationsConfigured = person switch
+            {
+                Tutor { AvailableQualifications.Count: > 0 } => true,
+                Student { InterestedQualifications.Count: > 0 } => true,
+                _ => false
+            }
+        };
 
         return new GetMeResponse(
             existingUser.Id,
@@ -176,7 +186,7 @@ public class IdentityService(
             existingUser.Person.Name,
             existingUser.Person.Type,
             existingUser.EmailConfirmed,
-            qualifications);
+            metadata);
     }
 
     private async Task SendConfirmationEmailAsync(
@@ -191,7 +201,7 @@ public class IdentityService(
         code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
 
         var userId = await userManager.GetUserIdAsync(user);
-        var routeValues = new RouteValueDictionary()
+        var routeValues = new RouteValueDictionary
         {
             ["userId"] = userId,
             ["code"] = code,
@@ -209,16 +219,19 @@ public class IdentityService(
         await emailSender.SendConfirmationLinkAsync(user, email, HtmlEncoder.Default.Encode(confirmEmailUrl));
     }
 
-    private async Task<IEnumerable<Guid>> GetQualificationIds(Person person, CancellationToken cancellationToken)
+    private async Task<Person?> GetPerson(Guid personId, CancellationToken cancellationToken)
     {
-        var qualificationIds = person switch
+        var person = await personRepository.GetByIdAsync(personId, cancellationToken);
+        if (person == null)
         {
-            Student student => await studentRepository.GetQualificationIdsAsync(student.Id, cancellationToken),
-            Tutor tutor => await tutorRepository.GetQualificationIdsAsync(tutor.Id, cancellationToken),
+            return null;
+        }
+
+        return person.Type switch
+        {
+            PersonTypeEnum.Student => await studentRepository.GetByIdWithQualificationsAsync(person.Id, cancellationToken),
+            PersonTypeEnum.Tutor => await tutorRepository.GetByIdWithQualificationsAndAvailabilitiesAsync(person.Id, cancellationToken),
             _ => throw new InvalidOperationException($"Invalid person type: {person.GetType().Name}")
         };
-
-        return qualificationIds ??
-               throw new InvalidOperationException($"{person.GetType().Name} not found or has no qualifications.");
     }
 }

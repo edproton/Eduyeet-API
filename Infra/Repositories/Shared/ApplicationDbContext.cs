@@ -27,9 +27,10 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-
         modelBuilder.Entity<LearningSystem>(entity =>
         {
+            entity.HasKey(ls => ls.Id);
+
             entity.HasMany(ls => ls.Subjects)
                 .WithOne(s => s.LearningSystem)
                 .HasForeignKey(s => s.LearningSystemId)
@@ -38,12 +39,29 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
         modelBuilder.Entity<Subject>(entity =>
         {
+            entity.HasKey(s => s.Id);
+
+            entity.HasOne(s => s.LearningSystem)
+                .WithMany(ls => ls.Subjects)
+                .HasForeignKey(s => s.LearningSystemId)
+                .OnDelete(DeleteBehavior.Cascade);
+
             entity.HasMany(s => s.Qualifications)
                 .WithOne(q => q.Subject)
-                .HasForeignKey(q => q.QualificationId)
+                .HasForeignKey(q => q.SubjectId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
-        
+
+        modelBuilder.Entity<Qualification>(entity =>
+        {
+            entity.HasKey(q => q.Id);
+
+            entity.HasOne(q => q.Subject)
+                .WithMany(s => s.Qualifications)
+                .HasForeignKey(q => q.SubjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
         modelBuilder.Entity<ApplicationUser>()
             .HasOne(au => au.Person)
             .WithOne()

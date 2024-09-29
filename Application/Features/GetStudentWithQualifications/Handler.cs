@@ -34,7 +34,7 @@ public class GetStudentWithQualificationsHandler(
         }
 
         var qualifications = student.InterestedQualifications
-            .Select(q => new QualificationDto(q.QualificationId, q.Subject.Name))
+            .Select(q => new QualificationDto(q.Id, q.Name))
             .ToList();
 
         return new GetStudentWithQualificationsResponse(
@@ -49,4 +49,4 @@ public record GetStudentWithQualificationsResponse(
     string StudentName,
     List<QualificationDto> Qualifications);
 
-public record QualificationDto(Guid SubjectId, string SubjectName);
+public record QualificationDto(Guid Id, string Name);

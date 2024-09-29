@@ -6,22 +6,26 @@ public class LearningSystem : BaseEntity
 {
     public required string Name { get; set; }
 
+    // Navigation properties
     public List<Subject> Subjects { get; set; } = [];
 }
 
 public class Subject : BaseEntity
 {
     public required string Name { get; set; }
-    
+
+    // Navigation properties
     public Guid LearningSystemId { get; set; }
     public required LearningSystem LearningSystem { get; set; }
-
     public List<Qualification> Qualifications { get; set; } = [];
 }
 
 public class Qualification : BaseEntity
 {
     public required string Name { get; set; }
-    public Guid QualificationId { get; set; }
+    
+    // Navigation properties
     public required Subject Subject { get; set; }
+    public Guid SubjectId { get; set; }
+    public Guid QualificationId { get; set; }
 }

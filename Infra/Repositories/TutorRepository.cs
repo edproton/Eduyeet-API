@@ -10,14 +10,6 @@ public class TutorRepository(ApplicationDbContext context) : Repository<Tutor>(c
 {
     public async Task<Tutor?> GetByIdWithQualificationsAsync(Guid personId, CancellationToken cancellationToken)
     {
-        var person = await Context.Persons
-            .FirstOrDefaultAsync(p => p.Id == personId, cancellationToken);
-
-        if (person is not { Type: PersonTypeEnum.Tutor })
-        {
-            return null;
-        }
-
         var tutor = await Context.Tutors
             .Include(t => t.AvailableQualifications)
             .FirstOrDefaultAsync(t => t.Id == personId, cancellationToken);
@@ -25,29 +17,27 @@ public class TutorRepository(ApplicationDbContext context) : Repository<Tutor>(c
         if (tutor != null)
         {
             tutor.AvailableQualifications ??= [];
-            tutor.AvailableQualificationsIds = tutor.AvailableQualifications.Select(q => q.Id).ToList();
         }
 
         return tutor;
     }
 
-    public async Task<IEnumerable<Guid>> GetQualificationIdsAsync(Guid tutorId, CancellationToken cancellationToken)
+    public async Task<Tutor?> GetByIdWithQualificationsAndAvailabilitiesAsync(Guid id, CancellationToken cancellationToken)
     {
-        var tutor = await Context.Tutors
-            .Where(t => t.Id == tutorId)
-            .Select(t => new { t.AvailableQualificationsIds })
-            .FirstOrDefaultAsync(cancellationToken);
-
-        return tutor?.AvailableQualificationsIds ?? Enumerable.Empty<Guid>();
-    }
-
-    public async Task<Tutor?> GetByIdWithQualificationsAndAvailabilitiesAsync(
-        Guid tutorId,
-        CancellationToken cancellationToken)
-    {
-        return await Context.Tutors
+        return await context.Tutors
             .Include(t => t.AvailableQualifications)
             .Include(t => t.Availabilities)
-            .FirstOrDefaultAsync(t => t.Id == tutorId, cancellationToken);
+            .ThenInclude(a => a.TimeSlots)
+            .FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
+    }
+
+    public async Task<List<Tutor>> GetTutorsWithQualificationAsync(Guid qualificationId, CancellationToken cancellationToken)
+    {
+        return await context.Tutors
+            .Include(t => t.AvailableQualifications)
+            .Include(t => t.Availabilities)
+            .ThenInclude(a => a.TimeSlots)
+            .Where(t => t.AvailableQualifications.Any(q => q.Id == qualificationId))
+            .ToListAsync(cancellationToken);
     }
 }

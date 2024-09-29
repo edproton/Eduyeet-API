@@ -15,11 +15,11 @@ public interface IJwtService
     ClaimsPrincipal? ValidateToken(string token);
 }
 
-public class JwtService(IOptions<JwtOptions> jwtOptions, IUserService userService) : IJwtService
+public class JwtService(IOptions<JwtOptions> jwtOptions) : IJwtService
 {
     private readonly JwtOptions _jwtOptions = jwtOptions.Value;
 
-    public async Task<string> GenerateToken(ApplicationUser user, CancellationToken cancellationToken)
+    public Task<string> GenerateToken(ApplicationUser user, CancellationToken cancellationToken)
     {
         if (user.UserName == null)
         {
@@ -35,12 +35,6 @@ public class JwtService(IOptions<JwtOptions> jwtOptions, IUserService userServic
             new("personId", user.PersonId.ToString())
         };
         
-        var qualificationIds = await userService.GetUserQualificationIds(user.PersonId, user.Person.Type, cancellationToken);
-        foreach (var qualificationId in qualificationIds)
-        {
-            claims.Add(new Claim("qualificationsIds", qualificationId.ToString()));
-        }
-
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.Secret));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
@@ -51,7 +45,7 @@ public class JwtService(IOptions<JwtOptions> jwtOptions, IUserService userServic
             expires: DateTime.UtcNow.AddMinutes(_jwtOptions.ExpireInMinutes),
             signingCredentials: creds);
 
-        return new JwtSecurityTokenHandler().WriteToken(token);
+        return Task.FromResult(new JwtSecurityTokenHandler().WriteToken(token));
     }
 
     public ClaimsPrincipal? ValidateToken(string token)

@@ -3,6 +3,7 @@ using System;
 using Infra.Repositories.Shared;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Infra.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20240929150908_AddingGetME6")]
+    partial class AddingGetME6
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -118,20 +121,13 @@ namespace Infra.Migrations
             modelBuilder.Entity("Domain.Entities.Qualification", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<Guid>("QualificationId")
-                        .HasColumnType("uuid");
-
                     b.Property<Guid?>("StudentId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("SubjectId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid?>("TutorId")
@@ -141,8 +137,6 @@ namespace Infra.Migrations
 
                     b.HasIndex("StudentId");
 
-                    b.HasIndex("SubjectId");
-
                     b.HasIndex("TutorId");
 
                     b.ToTable("Qualifications");
@@ -151,10 +145,6 @@ namespace Infra.Migrations
             modelBuilder.Entity("Domain.Entities.Subject", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("LearningSystemId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("Name")
@@ -162,8 +152,6 @@ namespace Infra.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("LearningSystemId");
 
                     b.ToTable("Subjects");
                 });
@@ -462,15 +450,15 @@ namespace Infra.Migrations
 
             modelBuilder.Entity("Domain.Entities.Qualification", b =>
                 {
+                    b.HasOne("Domain.Entities.Subject", "Subject")
+                        .WithMany("Qualifications")
+                        .HasForeignKey("Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("Domain.Entities.Student", null)
                         .WithMany("InterestedQualifications")
                         .HasForeignKey("StudentId");
-
-                    b.HasOne("Domain.Entities.Subject", "Subject")
-                        .WithMany("Qualifications")
-                        .HasForeignKey("SubjectId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
 
                     b.HasOne("Domain.Entities.Tutor", null)
                         .WithMany("AvailableQualifications")
@@ -483,7 +471,7 @@ namespace Infra.Migrations
                 {
                     b.HasOne("Domain.Entities.LearningSystem", "LearningSystem")
                         .WithMany("Subjects")
-                        .HasForeignKey("LearningSystemId")
+                        .HasForeignKey("Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

@@ -1,7 +1,7 @@
 namespace Application.Features.SetTutorAvailability;
 
 public record SetTutorAvailabilityCommand(
-    Guid TutorId,
+    Guid PersonId,
     List<AvailabilityDto> Availabilities) : IRequest<ErrorOr<SetTutorAvailabilityResponse>>;
 
 public record AvailabilityDto(DayOfWeek Day, List<TimeSlotDto> TimeSlots);
@@ -12,7 +12,7 @@ public class SetTutorAvailabilityCommandValidator : AbstractValidator<SetTutorAv
 {
     public SetTutorAvailabilityCommandValidator()
     {
-        RuleFor(c => c.TutorId).NotEmpty().WithMessage("Tutor ID is required.");
+        RuleFor(c => c.PersonId).NotEmpty().WithMessage("Tutor ID is required.");
         RuleFor(c => c.Availabilities).NotEmpty().WithMessage("At least one availability is required.");
         RuleForEach(c => c.Availabilities).SetValidator(new AvailabilityDtoValidator());
     }
@@ -45,10 +45,10 @@ public class SetTutorAvailabilityHandler(
         SetTutorAvailabilityCommand request,
         CancellationToken cancellationToken)
     {
-        var tutor = await tutorRepository.GetByIdWithQualificationsAndAvailabilitiesAsync(request.TutorId, cancellationToken);
+        var tutor = await tutorRepository.GetByIdWithQualificationsAndAvailabilitiesAsync(request.PersonId, cancellationToken);
         if (tutor == null)
         {
-            return Error.NotFound("TutorNotFound", $"A tutor with the ID '{request.TutorId}' was not found.");
+            return Error.NotFound("TutorNotFound", $"A tutor with the ID '{request.PersonId}' was not found.");
         }
 
         if (!tutor.AvailableQualifications.Any())
@@ -73,7 +73,7 @@ public class SetTutorAvailabilityHandler(
             {
                 var newAvailability = new Availability
                 {
-                    TutorId = request.TutorId,
+                    TutorId = request.PersonId,
                     Day = availabilityDto.Day,
                     TimeSlots = availabilityDto.TimeSlots.Select(ts => new TimeSlot
                     {
@@ -88,7 +88,7 @@ public class SetTutorAvailabilityHandler(
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new SetTutorAvailabilityResponse(request.TutorId, request.Availabilities);
+        return new SetTutorAvailabilityResponse(request.PersonId, request.Availabilities);
     }
 }
 

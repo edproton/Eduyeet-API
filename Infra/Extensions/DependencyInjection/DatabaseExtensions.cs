@@ -16,10 +16,11 @@ public static class DatabaseExtensions
     {
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
         services.AddScoped<IUnitOfWork, UnitOfWork>();
-        services.AddScoped<ILearningSystemRepository, LearningSystemRepository>();
-        services.AddScoped<IQualificationRepository, QualificationRepository>();
-        services.AddScoped<ISubjectRepository, SubjectRepository>();
-        services.AddScoped<ITutorRepository, TutorRepository>()
+
+        services.AddScoped<ILearningSystemRepository, LearningSystemRepository>()
+            .AddScoped<IQualificationRepository, QualificationRepository>()
+            .AddScoped<ISubjectRepository, SubjectRepository>()
+            .AddScoped<ITutorRepository, TutorRepository>()
             .AddScoped<IStudentRepository, StudentRepository>()
             .AddScoped<IAvailabilityRepository, AvailabilityRepository>()
             .AddScoped<IBookingRepository, BookingRepository>()
@@ -40,7 +41,7 @@ public static class DatabaseExtensions
         {
             var dbOptions = sp.GetRequiredService<IOptions<DatabaseOptions>>().Value;
             var connectionString = dbOptions.GetConnectionString();
-        
+
             switch (dbOptions.Provider)
             {
                 case DatabaseProvider.Postgres:

@@ -1,145 +1,123 @@
+using Application.Services;
+
 namespace Application.Features.CreateBooking;
 
 public record CreateBookingCommand(
     Guid StudentId,
     Guid TutorId,
     Guid QualificationId,
-    DateTime StartTime) : IRequest<ErrorOr<CreateBookingCommandResponse>>;
+    DateTime StartTime) : IRequest<ErrorOr<CreateBookingResponse>>;
 
 public class CreateBookingCommandValidator : AbstractValidator<CreateBookingCommand>
 {
     public CreateBookingCommandValidator()
     {
-        RuleFor(c => c.StudentId)
-            .NotEmpty().WithMessage("Student ID is required.");
-
-        RuleFor(c => c.TutorId)
-            .NotEmpty().WithMessage("Tutor ID is required.");
-
-        RuleFor(c => c.QualificationId)
-            .NotEmpty().WithMessage("Qualification ID is required.");
-
+        RuleFor(c => c.StudentId).NotEmpty().WithMessage("Student ID is required.");
+        RuleFor(c => c.TutorId).NotEmpty().WithMessage("Tutor ID is required.");
+        RuleFor(c => c.QualificationId).NotEmpty().WithMessage("Qualification ID is required.");
         RuleFor(c => c.StartTime)
             .NotEmpty().WithMessage("Start time is required.")
-            .Must(BeInFuture).WithMessage("Start time must be in the future.");
-    }
-
-    private static bool BeInFuture(DateTime startTime)
-    {
-        return startTime > DateTime.UtcNow;
+            .GreaterThan(DateTime.UtcNow).WithMessage("Start time must be in the future.");
     }
 }
 
-public class Handler(
-    IUnitOfWork unitOfWork,
+public class CreateBookingHandler(
     IStudentRepository studentRepository,
     ITutorRepository tutorRepository,
     IQualificationRepository qualificationRepository,
-    IBookingRepository bookingRepository)
-    : IRequestHandler<CreateBookingCommand, ErrorOr<CreateBookingCommandResponse>>
+    IBookingRepository bookingRepository,
+    IUnitOfWork unitOfWork,
+    TimeZoneService timeZoneService)
+    : IRequestHandler<CreateBookingCommand, ErrorOr<CreateBookingResponse>>
 {
-    public async Task<ErrorOr<CreateBookingCommandResponse>> Handle(
+    public async Task<ErrorOr<CreateBookingResponse>> Handle(
         CreateBookingCommand request,
         CancellationToken cancellationToken)
     {
-        var (studentResult, tutorResult, qualificationResult) = await GetEntities(request, cancellationToken);
+        var utcStartTime = request.StartTime.ToUniversalTime();
+        var utcEndTime = utcStartTime.AddHours(1);
 
-        if (studentResult.IsError)
-            return studentResult.Errors;
-        if (tutorResult.IsError)
-            return tutorResult.Errors;
-        if (qualificationResult.IsError)
-            return qualificationResult.Errors;
-
-        var student = studentResult.Value;
-        var tutor = tutorResult.Value;
-        var qualification = qualificationResult.Value;
-
-        var validationResult = await ValidateTutorQualificationsAndAvailability(tutor, qualification, request.StartTime, cancellationToken);
+        var validationResult = await ValidateBookingRequest(request, utcStartTime, utcEndTime, cancellationToken);
         if (validationResult.IsError)
+        {
             return validationResult.Errors;
+        }
+
+        var (student, tutor, qualification) = validationResult.Value;
 
         var booking = new Booking
         {
-            StudentId = student.Id,
+            StudentId = request.StudentId,
             Student = student,
-            TutorId = tutor.Id,
+            TutorId = request.TutorId,
             Tutor = tutor,
-            QualificationId = qualification.Id,
+            QualificationId = request.QualificationId,
             Qualification = qualification,
-            StartTime = request.StartTime,
-            EndTime = request.StartTime.AddMinutes(55)
+            StartTime = utcStartTime,
+            EndTime = utcEndTime
         };
 
         await bookingRepository.AddAsync(booking, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new CreateBookingCommandResponse(booking.Id);
+        return new CreateBookingResponse(booking.Id, booking.StudentId, booking.TutorId, booking.QualificationId, booking.StartTime, booking.EndTime);
     }
 
-    private async Task<(ErrorOr<Student>, ErrorOr<Tutor>, ErrorOr<Qualification>)> GetEntities(
+    private async Task<ErrorOr<(Student, Tutor, Qualification)>> ValidateBookingRequest(
         CreateBookingCommand request,
+        DateTime utcStartTime,
+        DateTime utcEndTime,
         CancellationToken cancellationToken)
     {
-        var studentTask = studentRepository.GetByIdAsync(request.StudentId, cancellationToken);
-        var tutorTask = tutorRepository.GetByIdWithQualificationsAndAvailabilitiesAsync(request.TutorId, cancellationToken);
-        var qualificationTask = qualificationRepository.GetByIdAsync(request.QualificationId, cancellationToken);
-
-        await Task.WhenAll(studentTask, tutorTask, qualificationTask);
-
-        ErrorOr<Student> studentResult = studentTask.Result != null
-            ? studentTask.Result
-            : Error.NotFound("StudentNotFound", $"A student with the ID '{request.StudentId}' was not found.");
-
-        ErrorOr<Tutor> tutorResult = tutorTask.Result != null
-            ? tutorTask.Result
-            : Error.NotFound("TutorNotFound", $"A tutor with the ID '{request.TutorId}' was not found.");
-
-        ErrorOr<Qualification> qualificationResult = qualificationTask.Result != null
-            ? qualificationTask.Result
-            : Error.NotFound("QualificationNotFound", $"A qualification with the ID '{request.QualificationId}' was not found.");
-
-        return (studentResult, tutorResult, qualificationResult);
-    }
-
-    private async Task<ErrorOr<Success>> ValidateTutorQualificationsAndAvailability(
-        Tutor tutor,
-        Qualification qualification,
-        DateTime startTime,
-        CancellationToken cancellationToken)
-    {
-        if (!tutor.AvailableQualifications.Any())
+        var student = await studentRepository.GetByIdWithQualificationsAsync(request.StudentId, cancellationToken);
+        if (student is null)
         {
-            return Error.Validation("TutorNotQualified", "The tutor does not have any qualifications.");
+            return Errors.Student.NotFound(request.StudentId);
         }
 
-        if (!tutor.Availabilities.Any())
+        var tutor = await tutorRepository.GetByIdWithQualificationsAndAvailabilitiesAsync(request.TutorId, cancellationToken);
+        if (tutor is null)
         {
-            return Error.Validation("TutorNotAvailable", "The tutor does not have any availabilities set.");
+            return Errors.Tutor.NotFound(request.TutorId);
         }
 
-        if (tutor.AvailableQualifications.All(q => q.QualificationId != qualification.Id))
+        var qualification = await qualificationRepository.GetByIdAsync(request.QualificationId, cancellationToken);
+        if (qualification is null)
         {
-            return Error.Validation("TutorNotQualifiedForQualification",
-                $"The tutor is not qualified for the qualification with ID '{qualification.Id}'.");
+            return Errors.Qualification.NotFound(request.QualificationId);
         }
 
-        var endTime = startTime.AddMinutes(55);
-        if (!tutor.Availabilities.Any(a => a.IsAvailableAt(startTime) && a.IsAvailableAt(endTime.AddMinutes(-1))))
+        if (!tutor.AvailableQualifications.Any(q => q.Id == request.QualificationId))
         {
-            return Error.Conflict("TutorNotAvailableAtRequestedTime",
-                "The tutor is not available at the requested time.");
+            return Errors.Booking.QualificationNotAvailable;
         }
 
-        var existingBooking = await bookingRepository.GetOverlappingBookingAsync(tutor.Id, startTime, endTime, cancellationToken);
-        if (existingBooking != null)
+        if (!student.InterestedQualifications.Any(q => q.Id == request.QualificationId))
         {
-            return Error.Conflict("OverlappingBooking",
-                "The tutor already has a booking during the requested time.");
+            return Errors.Booking.StudentNotInterestedInQualification;
         }
 
-        return Result.Success;
+        var availability = tutor.Availabilities.FirstOrDefault(a => a.Day == utcStartTime.DayOfWeek);
+        if (availability is null)
+        {
+            return Errors.Booking.TutorNotAvailable;
+        }
+
+        var relevantTimeSlot = availability.TimeSlots.FirstOrDefault(ts => 
+            ts.ContainsRange(utcStartTime.TimeOfDay, utcEndTime.TimeOfDay));
+        if (relevantTimeSlot is null)
+        {
+            return Errors.Booking.TutorNotAvailable;
+        }
+
+        var existingBooking = await bookingRepository.GetOverlappingBookingAsync(request.TutorId, utcStartTime, utcEndTime, cancellationToken);
+        if (existingBooking is not null)
+        {
+            return Errors.Booking.OverlappingBooking;
+        }
+
+        return (student, tutor, qualification);
     }
 }
 
-public record CreateBookingCommandResponse(Guid BookingId);
+public record CreateBookingResponse(Guid BookingId, Guid StudentId, Guid TutorId, Guid QualificationId, DateTime StartTime, DateTime EndTime);

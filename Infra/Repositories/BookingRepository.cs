@@ -14,11 +14,50 @@ public class BookingRepository(ApplicationDbContext context)
         DateTime endTime,
         CancellationToken cancellationToken)
     {
+        var utcStartTime = startTime.Kind == DateTimeKind.Unspecified 
+            ? DateTime.SpecifyKind(startTime, DateTimeKind.Utc)
+            : startTime.ToUniversalTime();
+        
+        var utcEndTime = endTime.Kind == DateTimeKind.Unspecified 
+            ? DateTime.SpecifyKind(endTime, DateTimeKind.Utc)
+            : endTime.ToUniversalTime();
+
         return Context.Bookings
             .FirstOrDefaultAsync(b =>
                     b.TutorId == tutorId &&
-                    b.StartTime < endTime &&
-                    b.EndTime > startTime,
+                    b.StartTime < utcEndTime &&
+                    b.EndTime > utcStartTime,
                 cancellationToken);
+    }
+
+    public async Task<List<Booking>> GetBookingsByStudentIdAsync(Guid studentId, CancellationToken cancellationToken)
+    {
+        return await Context.Bookings
+            .Where(b => b.StudentId == studentId)
+            .Include(b => b.Tutor)
+            .Include(b => b.Qualification)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<List<Booking>> GetBookingsByTutorIdAsync(Guid tutorId, CancellationToken cancellationToken)
+    {
+        return await Context.Bookings
+            .Where(b => b.TutorId == tutorId)
+            .ToListAsync(cancellationToken);
+    }
+    
+    public async Task<List<Booking>> GetBookingsForTutorInRangeAsync(
+        Guid tutorId,
+        DateTime startTime,
+        DateTime endTime,
+        CancellationToken cancellationToken)
+    {
+        return await Context.Bookings
+            .Where(b =>
+                b.TutorId == tutorId &&
+                b.StartTime < endTime &&
+                b.EndTime > startTime)
+            .OrderBy(b => b.StartTime)
+            .ToListAsync(cancellationToken);
     }
 }

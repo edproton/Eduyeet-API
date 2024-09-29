@@ -13,7 +13,6 @@ public static class ServicesExtensions
     public static IServiceCollection AddServices(this IServiceCollection services)
     {
         services
-            .AddScoped<IUserService, UserService>()
             .AddScoped<IJwtService, JwtService>()
             .AddScoped<IIdentityService, IdentityService>()
             .AddScoped<EmailSender>()

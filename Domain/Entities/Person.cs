@@ -14,6 +14,8 @@ public class Person : BaseEntity
 
     public required string Name { get; set; }
 
+    public string TimeZoneId { get; set; } = null!;
+
     public Person(PersonTypeEnum type)
     {
         Type = type;

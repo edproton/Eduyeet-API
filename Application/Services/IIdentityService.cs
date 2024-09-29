@@ -10,7 +10,7 @@ public interface IIdentityService
         Guid personId,
         CreatePersonCommand request,
         CancellationToken cancellationToken);
-    
+
     Task<ErrorOr<Success>> ConfirmEmailAsync(
         string userId,
         string code,
@@ -25,7 +25,7 @@ public class LoginRequest
 {
     public required string Email { get; set; }
     public required string Password { get; set; }
-    
+
     public string? TwoFactorCode { get; set; }
 
     public string? TwoFactorRecoveryCode { get; set; }
@@ -34,7 +34,7 @@ public class LoginRequest
 public record LoginResponse(
     string Token,
     string RefreshToken);
-    
+
 public record GetMeResponse(
     string Id,
     Guid PersonId,
@@ -42,4 +42,11 @@ public record GetMeResponse(
     string Name,
     PersonTypeEnum Type,
     bool EmailConfirmed,
-    IEnumerable<Guid> QualificationsIds);
+    Metadata Metadata);
+
+public class Metadata
+{
+    public bool? IsAvailabilityConfigured { get; set; }
+
+    public bool? IsQualificationsConfigured { get; set; }
+}

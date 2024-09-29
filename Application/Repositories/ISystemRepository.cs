@@ -16,4 +16,14 @@ public interface ISubjectRepository : IRepository<Subject>
 public interface IBookingRepository : IRepository<Booking>
 {
     Task<Booking?> GetOverlappingBookingAsync(Guid tutorId, DateTime startTime, DateTime endTime, CancellationToken cancellationToken);
+
+    Task<List<Booking>> GetBookingsByStudentIdAsync(Guid studentId, CancellationToken cancellationToken);
+    
+    Task<List<Booking>> GetBookingsByTutorIdAsync(Guid tutorId, CancellationToken cancellationToken);
+
+    Task<List<Booking>> GetBookingsForTutorInRangeAsync(
+        Guid tutorId,
+        DateTime startTime,
+        DateTime endTime,
+        CancellationToken cancellationToken);
 }

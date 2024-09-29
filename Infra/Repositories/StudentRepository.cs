@@ -30,10 +30,9 @@ public class StudentRepository(ApplicationDbContext context) : Repository<Studen
             .Include(t => t.InterestedQualifications)
             .FirstOrDefaultAsync(t => t.Id == studentId, cancellationToken);
         
-        if (tutor != null)
+        if (tutor is { InterestedQualifications: null })
         {
             tutor.InterestedQualifications ??= [];
-            tutor.InterestedQualificationsIds = tutor.InterestedQualifications.Select(q => q.Id).ToList();
         }
 
         return tutor;
