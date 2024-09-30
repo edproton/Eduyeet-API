@@ -21,9 +21,9 @@ public class Student() : Person(PersonTypeEnum.Student)
 public class Availability : BaseEntity
 {
     public Guid TutorId { get; set; }
-    public required Tutor Tutor { get; set; }
+    public Tutor Tutor { get; set; } = default!;
     public DayOfWeek Day { get; set; }
-    public List<TimeSlot> TimeSlots { get; set; } = new();
+    public List<TimeSlot> TimeSlots { get; set; } = [];
 
     public bool IsAvailableAt(DateTime utcDateTime)
     {
@@ -53,7 +53,7 @@ public class TimeSlot : BaseEntity
         {
             return time >= StartTime && time < EndTime;
         }
-    
+
         return time >= StartTime || time < EndTime;
     }
 
@@ -66,13 +66,14 @@ public class TimeSlot : BaseEntity
 public class Booking : BaseEntity
 {
     public Guid StudentId { get; set; }
-    public required Student Student { get; set; }
+    public Student Student { get; set; } = default!;
     public Guid TutorId { get; set; }
-    public required Tutor Tutor { get; set; }
+    public Tutor Tutor { get; set; } = default!;
     public Guid QualificationId { get; set; }
-    public required Qualification Qualification { get; set; }
+    public Qualification Qualification { get; set; } = default!;
 
     private DateTime _startTime;
+
     public DateTime StartTime
     {
         get => _startTime;
@@ -80,6 +81,7 @@ public class Booking : BaseEntity
     }
 
     private DateTime _endTime;
+
     public DateTime EndTime
     {
         get => _endTime;

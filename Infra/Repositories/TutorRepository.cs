@@ -1,6 +1,5 @@
 using Application.Repositories;
 using Domain.Entities;
-using Domain.Enums;
 using Infra.Repositories.Shared;
 using Microsoft.EntityFrameworkCore;
 

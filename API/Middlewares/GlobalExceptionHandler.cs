@@ -29,10 +29,7 @@ public class GlobalExceptionHandler(
 
         var errorResponse = new ErrorResponse
         {
-            Errors = new List<ErrorDetail>
-            {
-                new() { Code = errorCode, Description = errorDescription }
-            }
+            Errors = [new() { Code = errorCode, Description = errorDescription }]
         };
 
         await httpContext.Response.WriteAsync(JsonSerializer.Serialize(errorResponse), cancellationToken);

@@ -4,7 +4,7 @@ namespace Domain.Entities;
 
 public class LearningSystem : BaseEntity
 {
-    public required string Name { get; set; }
+    public string Name { get; set; } = default!;
 
     // Navigation properties
     public List<Subject> Subjects { get; set; } = [];
@@ -12,20 +12,20 @@ public class LearningSystem : BaseEntity
 
 public class Subject : BaseEntity
 {
-    public required string Name { get; set; }
+    public string Name { get; set; } = default!;
 
     // Navigation properties
     public Guid LearningSystemId { get; set; }
-    public required LearningSystem LearningSystem { get; set; }
+    public LearningSystem LearningSystem { get; set; } = default!;
     public List<Qualification> Qualifications { get; set; } = [];
 }
 
 public class Qualification : BaseEntity
 {
-    public required string Name { get; set; }
+    public string Name { get; set; } = default!;
     
     // Navigation properties
-    public required Subject Subject { get; set; }
+    public Subject Subject { get; set; } = default!;
     public Guid SubjectId { get; set; }
     public Guid QualificationId { get; set; }
 }

@@ -103,6 +103,10 @@ namespace Infra.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("TimeZoneId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<int>("Type")
                         .HasColumnType("integer");
 

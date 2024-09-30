@@ -60,4 +60,13 @@ public class BookingRepository(ApplicationDbContext context)
             .OrderBy(b => b.StartTime)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<List<Booking>> GetBookingsByStudentIdWithTutorAndQualificationAsync(Guid studentId, CancellationToken cancellationToken)
+    {
+        return await Context.Bookings
+            .Where(b => b.StudentId == studentId)
+            .Include(b => b.Tutor) // Eagerly load the Tutor entity
+            .Include(b => b.Qualification) // Eagerly load the Qualification entity
+            .ToListAsync(cancellationToken);
+    }
 }

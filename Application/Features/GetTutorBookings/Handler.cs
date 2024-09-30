@@ -1,3 +1,5 @@
+using Application.Services;
+
 namespace Application.Features.GetTutorBookings;
 
 public record GetTutorBookingsQuery(Guid TutorId) : IRequest<ErrorOr<GetTutorBookingsResponse>>;
@@ -12,7 +14,8 @@ public class GetTutorBookingsQueryValidator : AbstractValidator<GetTutorBookings
 
 public class GetTutorBookingsHandler(
     ITutorRepository tutorRepository,
-    IBookingRepository bookingRepository)
+    IBookingRepository bookingRepository,
+    TimeZoneService timeZoneService)
     : IRequestHandler<GetTutorBookingsQuery, ErrorOr<GetTutorBookingsResponse>>
 {
     public async Task<ErrorOr<GetTutorBookingsResponse>> Handle(
@@ -33,8 +36,8 @@ public class GetTutorBookingsHandler(
             b.Student.Name,
             b.QualificationId,
             b.Qualification.Name,
-            b.StartTime,
-            b.EndTime
+            timeZoneService.ConvertFromUtc(b.StartTime, tutor.TimeZoneId),
+            timeZoneService.ConvertFromUtc(b.EndTime, tutor.TimeZoneId)
         )).ToList();
 
         return new GetTutorBookingsResponse(request.TutorId, bookingDtos);

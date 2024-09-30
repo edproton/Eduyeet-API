@@ -1,5 +1,7 @@
 using Application.Pipelines;
+using Application.Services;
 using Microsoft.Extensions.DependencyInjection;
+using NodaTime;
 
 namespace Application;
 
@@ -14,6 +16,9 @@ public static class DependencyInjection
             cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly);
             cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
         });
+        
+        services.AddSingleton(DateTimeZoneProviders.Tzdb);
+        services.AddScoped<TimeZoneService>();
         
         return services;
     }

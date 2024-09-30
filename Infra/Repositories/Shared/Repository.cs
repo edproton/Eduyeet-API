@@ -12,7 +12,7 @@ public class Repository<T>(ApplicationDbContext context) : IRepository<T>
 
     public async Task<T?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
     {
-        return await DbSet.FindAsync(new object[] { id }, cancellationToken);
+        return await DbSet.FindAsync([id], cancellationToken);
     }
 
     public virtual async Task<PaginatedResponse<T>> GetAllAsync(

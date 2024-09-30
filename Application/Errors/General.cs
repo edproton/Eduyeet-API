@@ -27,6 +27,10 @@ public static class Tutor
     public static Error DuplicateEmail => Error.Conflict(
         code: "Tutor.DuplicateEmail",
         description: "A tutor with this email already exists.");
+    
+    public static Error NoQualifications => Error.Validation(
+        "NoQualifications",
+        "The tutor must have at least one qualification before setting availability.");
 }
 
 public static class Qualification

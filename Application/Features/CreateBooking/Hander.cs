@@ -8,19 +8,6 @@ public record CreateBookingCommand(
     Guid QualificationId,
     DateTime StartTime) : IRequest<ErrorOr<CreateBookingResponse>>;
 
-public class CreateBookingCommandValidator : AbstractValidator<CreateBookingCommand>
-{
-    public CreateBookingCommandValidator()
-    {
-        RuleFor(c => c.StudentId).NotEmpty().WithMessage("Student ID is required.");
-        RuleFor(c => c.TutorId).NotEmpty().WithMessage("Tutor ID is required.");
-        RuleFor(c => c.QualificationId).NotEmpty().WithMessage("Qualification ID is required.");
-        RuleFor(c => c.StartTime)
-            .NotEmpty().WithMessage("Start time is required.")
-            .GreaterThan(DateTime.UtcNow).WithMessage("Start time must be in the future.");
-    }
-}
-
 public class CreateBookingHandler(
     IStudentRepository studentRepository,
     ITutorRepository tutorRepository,
@@ -34,16 +21,29 @@ public class CreateBookingHandler(
         CreateBookingCommand request,
         CancellationToken cancellationToken)
     {
+        var student = await studentRepository.GetByIdWithQualificationsAsync(request.StudentId, cancellationToken);
+        if (student is null)
+        {
+            return Errors.Student.NotFound(request.StudentId);
+        }
+
+        var tutor = await tutorRepository.GetByIdWithQualificationsAndAvailabilitiesAsync(request.TutorId, cancellationToken);
+        if (tutor is null)
+        {
+            return Errors.Tutor.NotFound(request.TutorId);
+        }
+
+        // Keep the start time in UTC
         var utcStartTime = request.StartTime.ToUniversalTime();
         var utcEndTime = utcStartTime.AddHours(1);
 
-        var validationResult = await ValidateBookingRequest(request, utcStartTime, utcEndTime, cancellationToken);
+        var validationResult = await ValidateBookingRequest(request, student, tutor, utcStartTime, utcEndTime, cancellationToken);
         if (validationResult.IsError)
         {
             return validationResult.Errors;
         }
 
-        var (student, tutor, qualification) = validationResult.Value;
+        var qualification = validationResult.Value;
 
         var booking = new Booking
         {
@@ -60,51 +60,47 @@ public class CreateBookingHandler(
         await bookingRepository.AddAsync(booking, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new CreateBookingResponse(booking.Id, booking.StudentId, booking.TutorId, booking.QualificationId, booking.StartTime, booking.EndTime);
+        var studentLocalStartTime = timeZoneService.ConvertFromUtc(booking.StartTime, student.TimeZoneId);
+        var studentLocalEndTime = timeZoneService.ConvertFromUtc(booking.EndTime, student.TimeZoneId);
+
+        return new CreateBookingResponse(booking.Id, booking.StudentId, booking.TutorId, booking.QualificationId, studentLocalStartTime, studentLocalEndTime);
     }
 
-    private async Task<ErrorOr<(Student, Tutor, Qualification)>> ValidateBookingRequest(
+    private async Task<ErrorOr<Qualification>> ValidateBookingRequest(
         CreateBookingCommand request,
+        Student student,
+        Tutor tutor,
         DateTime utcStartTime,
         DateTime utcEndTime,
         CancellationToken cancellationToken)
     {
-        var student = await studentRepository.GetByIdWithQualificationsAsync(request.StudentId, cancellationToken);
-        if (student is null)
-        {
-            return Errors.Student.NotFound(request.StudentId);
-        }
-
-        var tutor = await tutorRepository.GetByIdWithQualificationsAndAvailabilitiesAsync(request.TutorId, cancellationToken);
-        if (tutor is null)
-        {
-            return Errors.Tutor.NotFound(request.TutorId);
-        }
-
         var qualification = await qualificationRepository.GetByIdAsync(request.QualificationId, cancellationToken);
         if (qualification is null)
         {
             return Errors.Qualification.NotFound(request.QualificationId);
         }
 
-        if (!tutor.AvailableQualifications.Any(q => q.Id == request.QualificationId))
+        if (tutor.AvailableQualifications.All(q => q.Id != request.QualificationId))
         {
             return Errors.Booking.QualificationNotAvailable;
         }
 
-        if (!student.InterestedQualifications.Any(q => q.Id == request.QualificationId))
+        if (student.InterestedQualifications.All(q => q.Id != request.QualificationId))
         {
             return Errors.Booking.StudentNotInterestedInQualification;
         }
 
-        var availability = tutor.Availabilities.FirstOrDefault(a => a.Day == utcStartTime.DayOfWeek);
+        var tutorLocalStartTime = timeZoneService.ConvertFromUtc(utcStartTime, tutor.TimeZoneId);
+        var availability = tutor.Availabilities.FirstOrDefault(a => a.Day == tutorLocalStartTime.DayOfWeek);
         if (availability is null)
         {
             return Errors.Booking.TutorNotAvailable;
         }
 
-        var relevantTimeSlot = availability.TimeSlots.FirstOrDefault(ts => 
-            ts.ContainsRange(utcStartTime.TimeOfDay, utcEndTime.TimeOfDay));
+        // Directly compare UTC times against the tutor's UTC availabilities
+        var relevantTimeSlot = availability.TimeSlots.FirstOrDefault(ts =>
+            ts.StartTime <= utcStartTime.TimeOfDay && ts.EndTime >= utcEndTime.TimeOfDay);
+
         if (relevantTimeSlot is null)
         {
             return Errors.Booking.TutorNotAvailable;
@@ -116,8 +112,9 @@ public class CreateBookingHandler(
             return Errors.Booking.OverlappingBooking;
         }
 
-        return (student, tutor, qualification);
+        return qualification;
     }
 }
 
 public record CreateBookingResponse(Guid BookingId, Guid StudentId, Guid TutorId, Guid QualificationId, DateTime StartTime, DateTime EndTime);
+

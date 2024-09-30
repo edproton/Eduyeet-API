@@ -26,4 +26,6 @@ public interface IBookingRepository : IRepository<Booking>
         DateTime startTime,
         DateTime endTime,
         CancellationToken cancellationToken);
+
+    Task<List<Booking>> GetBookingsByStudentIdWithTutorAndQualificationAsync(Guid studentId, CancellationToken cancellationToken);
 }

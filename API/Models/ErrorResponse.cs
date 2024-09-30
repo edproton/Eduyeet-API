@@ -2,7 +2,7 @@ namespace API.Models;
 
 public class ErrorResponse
 {
-    public List<ErrorDetail> Errors { get; set; } = new();
+    public List<ErrorDetail> Errors { get; set; } = [];
 }
 
 public class ErrorDetail

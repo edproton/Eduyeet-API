@@ -15,33 +15,23 @@ public class FindAvailableTutorsQueryValidator : AbstractValidator<FindAvailable
     }
 }
 
-public class FindAvailableTutorsHandler : IRequestHandler<FindAvailableTutorsQuery, ErrorOr<FindAvailableTutorsResponse>>
+public class FindAvailableTutorsHandler(
+    ITutorRepository tutorRepository,
+    IQualificationRepository qualificationRepository,
+    IBookingRepository bookingRepository)
+    : IRequestHandler<FindAvailableTutorsQuery, ErrorOr<FindAvailableTutorsResponse>>
 {
-    private readonly ITutorRepository _tutorRepository;
-    private readonly IQualificationRepository _qualificationRepository;
-    private readonly IBookingRepository _bookingRepository;
-
-    public FindAvailableTutorsHandler(
-        ITutorRepository tutorRepository,
-        IQualificationRepository qualificationRepository,
-        IBookingRepository bookingRepository)
-    {
-        _tutorRepository = tutorRepository;
-        _qualificationRepository = qualificationRepository;
-        _bookingRepository = bookingRepository;
-    }
-
     public async Task<ErrorOr<FindAvailableTutorsResponse>> Handle(
         FindAvailableTutorsQuery request,
         CancellationToken cancellationToken)
     {
-        var qualification = await _qualificationRepository.GetByIdAsync(request.QualificationId, cancellationToken);
+        var qualification = await qualificationRepository.GetByIdAsync(request.QualificationId, cancellationToken);
         if (qualification == null)
         {
             return Error.NotFound("QualificationNotFound", $"A qualification with the ID '{request.QualificationId}' was not found.");
         }
 
-        var tutors = await _tutorRepository.GetTutorsWithQualificationAsync(request.QualificationId, cancellationToken);
+        var tutors = await tutorRepository.GetTutorsWithQualificationAsync(request.QualificationId, cancellationToken);
 
         var availableTutors = new List<AvailableTutorDto>();
         var utcRequestedDateTime = request.RequestedDateTime.ToUniversalTime();
@@ -58,7 +48,7 @@ public class FindAvailableTutorsHandler : IRequestHandler<FindAvailableTutorsQue
                 if (relevantTimeSlot != null)
                 {
                     // Check if there's no overlapping booking
-                    var overlappingBooking = await _bookingRepository.GetOverlappingBookingAsync(
+                    var overlappingBooking = await bookingRepository.GetOverlappingBookingAsync(
                         tutor.Id,
                         utcRequestedDateTime,
                         utcEndDateTime,

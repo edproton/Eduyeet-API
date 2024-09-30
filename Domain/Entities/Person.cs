@@ -12,7 +12,7 @@ public class Person : BaseEntity
 {
     public PersonTypeEnum Type { get; set; }
 
-    public required string Name { get; set; }
+    public string Name { get; set; } = null!;
 
     public string TimeZoneId { get; set; } = null!;
 

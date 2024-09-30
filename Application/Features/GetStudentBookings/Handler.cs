@@ -1,3 +1,5 @@
+using Application.Services;
+
 namespace Application.Features.GetStudentBookings;
 
 public record GetStudentBookingsQuery(Guid StudentId) : IRequest<ErrorOr<IEnumerable<GetStudentBookingsResponse>>>;
@@ -11,6 +13,7 @@ public class GetStudentBookingsQueryValidator : AbstractValidator<GetStudentBook
 }
 
 public class GetStudentBookingsHandler(
+    TimeZoneService timeZoneService,
     IStudentRepository studentRepository,
     IBookingRepository bookingRepository)
     : IRequestHandler<GetStudentBookingsQuery, ErrorOr<IEnumerable<GetStudentBookingsResponse>>>
@@ -25,17 +28,20 @@ public class GetStudentBookingsHandler(
             return Error.NotFound("StudentNotFound", $"A student with the ID '{request.StudentId}' was not found.");
         }
 
-        var bookings = await bookingRepository.GetBookingsByStudentIdAsync(request.StudentId, cancellationToken);
+        // Efficiently fetch bookings with related Tutor and Qualification data
+        var bookings = await bookingRepository.GetBookingsByStudentIdWithTutorAndQualificationAsync(
+            request.StudentId, cancellationToken);
 
-        var bookingDtos = bookings.Select(b => new GetStudentBookingsResponse(
-            b.Id,
-            b.TutorId,
-            b.Tutor.Name,
-            b.QualificationId,
-            b.Qualification.Name,
-            b.StartTime,
-            b.EndTime
-        ));
+        var bookingDtos = bookings.Select(b => 
+            new GetStudentBookingsResponse(
+                b.Id,
+                b.TutorId,
+                b.Tutor!.Name, // Assuming Tutor is included in the fetched data
+                b.QualificationId,
+                b.Qualification!.Name, // Assuming Qualification is included in the fetched data
+                timeZoneService.ConvertFromUtc(b.StartTime, student.TimeZoneId),
+                timeZoneService.ConvertFromUtc(b.EndTime, student.TimeZoneId)
+            ));
 
         return bookingDtos.ToList();
     }
