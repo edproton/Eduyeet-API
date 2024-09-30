@@ -13,7 +13,7 @@ public class SetTutorAvailabilityCommandValidatorTests
         var command = new SetTutorAvailabilityCommand(Guid.Empty, []);
         var result = _validator.TestValidate(command);
         result.ShouldHaveValidationErrorFor(c => c.PersonId)
-            .WithErrorMessage("Tutor ID is required.");
+            .WithErrorMessage("Person ID is required.");
     }
 
     [TestMethod]
