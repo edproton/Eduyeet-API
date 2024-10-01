@@ -1,5 +1,5 @@
 using Application.Features.CreateBooking;
-using Application.Features.FindAvailableTutors;
+using Application.Features.FindAvailableTutorsHandler;
 using Application.Features.GetStudentBookings;
 using Application.Features.GetTutorBookings;
 
@@ -7,7 +7,9 @@ namespace API.Controllers;
 
 [ApiController]
 [Route("api/bookings")]
-public class BookingsController(ISender mediator) : ControllerBase
+public class BookingsController(
+    ISender mediator,
+    TimeProvider timeProvider) : ControllerBase
 {
     [HttpPost]
     public async Task<ActionResult> CreateBooking(CreateBookingCommand command)
@@ -16,7 +18,6 @@ public class BookingsController(ISender mediator) : ControllerBase
 
         return result.ToHttpActionResult();
     }
-
 
     [HttpGet("students/{studentId:guid}")]
     public async Task<ActionResult> GetStudentBookings(Guid studentId)
@@ -39,10 +40,9 @@ public class BookingsController(ISender mediator) : ControllerBase
     [HttpGet("available-tutors")]
     public async Task<ActionResult> FindAvailableTutors(
         [FromQuery] Guid qualificationId, 
-        [FromQuery] DateTime requestedDateTime,
         [FromQuery] string timeZoneId)
     {
-        var query = new FindAvailableTutorsQuery(qualificationId, requestedDateTime, timeZoneId);
+        var query = new FindAvailableTutorsQuery(qualificationId, timeZoneId);
         var result = await mediator.Send(query);
 
         return result.ToHttpActionResult();

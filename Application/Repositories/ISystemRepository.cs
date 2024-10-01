@@ -28,4 +28,10 @@ public interface IBookingRepository : IRepository<Booking>
         CancellationToken cancellationToken);
 
     Task<List<Booking>> GetBookingsByStudentIdWithTutorAndQualificationAsync(Guid studentId, CancellationToken cancellationToken);
+
+    Task<List<Booking>> GetOverlappingBookingsAsync(
+        Guid tutorId,
+        DateTime startDate,
+        DateTime endDate,
+        CancellationToken cancellationToken);
 }

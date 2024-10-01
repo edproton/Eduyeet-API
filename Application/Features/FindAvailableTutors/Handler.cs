@@ -35,7 +35,7 @@ public class FindAvailableTutorsHandler(
             return Error.NotFound("QualificationNotFound", $"A qualification with the ID '{request.QualificationId}' was not found.");
         }
 
-        var tutors = await tutorRepository.GetTutorsWithQualificationAsync(request.QualificationId, cancellationToken);
+        var tutors = await tutorRepository.GetTutorsWithQualificationAndAvailabilitiesAsync(request.QualificationId, cancellationToken);
 
         var availableTutors = new List<AvailableTutorDto>();
         var utcRequestedDateTime = timeZoneService.ConvertToUtc(request.RequestedDateTime, request.TimeZoneId);

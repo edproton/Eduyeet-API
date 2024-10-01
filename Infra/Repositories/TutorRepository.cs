@@ -16,7 +16,7 @@ public class TutorRepository(ApplicationDbContext context) : Repository<Tutor>(c
             .FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
     }
 
-    public async Task<List<Tutor>> GetTutorsWithQualificationAsync(Guid qualificationId, CancellationToken cancellationToken)
+    public async Task<List<Tutor>> GetTutorsWithQualificationAndAvailabilitiesAsync(Guid qualificationId, CancellationToken cancellationToken)
     {
         return await Context.Tutors
             .Include(t => t.AvailableQualifications)

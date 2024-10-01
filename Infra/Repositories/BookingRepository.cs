@@ -69,4 +69,21 @@ public class BookingRepository(ApplicationDbContext context)
             .Include(b => b.Qualification) // Eagerly load the Qualification entity
             .ToListAsync(cancellationToken);
     }
+    
+    public async Task<List<Booking>> GetOverlappingBookingsAsync(
+        Guid tutorId,
+        DateTime startDate,
+        DateTime endDate,
+        CancellationToken cancellationToken)
+    {
+        // Convert dates to DateTimeOffset to match the entity property type
+        var startDateOffset = new DateTimeOffset(startDate.Date, TimeSpan.Zero);
+        var endDateOffset = new DateTimeOffset(endDate.Date.AddDays(1), TimeSpan.Zero);
+
+        return await Context.Bookings
+            .Where(b => b.TutorId == tutorId &&
+                        b.StartTime < endDateOffset &&
+                        b.EndTime > startDateOffset)
+            .ToListAsync(cancellationToken);
+    }
 }

@@ -4,5 +4,5 @@ public interface ITutorRepository : IRepository<Tutor>
 {
     Task<Tutor?> GetByIdWithQualificationsAndAvailabilitiesAsync(Guid personId, CancellationToken cancellationToken);
 
-    Task<List<Tutor>> GetTutorsWithQualificationAsync (Guid qualificationId, CancellationToken cancellationToken);
+    Task<List<Tutor>> GetTutorsWithQualificationAndAvailabilitiesAsync (Guid qualificationId, CancellationToken cancellationToken);
 }
