@@ -1,3 +1,5 @@
+using Application.Services;
+
 namespace Application.Features.FindAvailableTutors;
 
 public record FindAvailableTutorsQuery(
@@ -18,7 +20,8 @@ public class FindAvailableTutorsQueryValidator : AbstractValidator<FindAvailable
 public class FindAvailableTutorsHandler(
     ITutorRepository tutorRepository,
     IQualificationRepository qualificationRepository,
-    IBookingRepository bookingRepository)
+    IBookingRepository bookingRepository,
+    TimeZoneService timeZoneService)
     : IRequestHandler<FindAvailableTutorsQuery, ErrorOr<FindAvailableTutorsResponse>>
 {
     public async Task<ErrorOr<FindAvailableTutorsResponse>> Handle(
@@ -39,28 +42,22 @@ public class FindAvailableTutorsHandler(
 
         foreach (var tutor in tutors)
         {
-            var availability = tutor.Availabilities.FirstOrDefault(a => a.Day == utcRequestedDateTime.DayOfWeek);
-            if (availability != null)
+            if (IsTutorAvailable(tutor, utcRequestedDateTime, utcEndDateTime))
             {
-                var relevantTimeSlot = availability.TimeSlots.FirstOrDefault(ts => 
-                    ts.ContainsRange(utcRequestedDateTime.TimeOfDay, utcEndDateTime.TimeOfDay));
+                var overlappingBooking = await bookingRepository.GetOverlappingBookingAsync(
+                    tutor.Id,
+                    utcRequestedDateTime,
+                    utcEndDateTime,
+                    cancellationToken);
 
-                if (relevantTimeSlot != null)
+                if (overlappingBooking == null)
                 {
-                    // Check if there's no overlapping booking
-                    var overlappingBooking = await bookingRepository.GetOverlappingBookingAsync(
+                    availableTutors.Add(new AvailableTutorDto(
                         tutor.Id,
-                        utcRequestedDateTime,
-                        utcEndDateTime,
-                        cancellationToken);
-
-                    if (overlappingBooking == null)
-                    {
-                        availableTutors.Add(new AvailableTutorDto(
-                            tutor.Id,
-                            tutor.Name
-                        ));
-                    }
+                        tutor.Name,
+                        timeZoneService.ConvertFromUtc(utcRequestedDateTime, tutor.TimeZoneId),
+                        timeZoneService.ConvertFromUtc(utcEndDateTime, tutor.TimeZoneId)
+                    ));
                 }
             }
         }
@@ -71,6 +68,20 @@ public class FindAvailableTutorsHandler(
             utcRequestedDateTime,
             availableTutors
         );
+    }
+
+    private bool IsTutorAvailable(Tutor tutor, DateTime utcStartDateTime, DateTime utcEndDateTime)
+    {
+        var tutorLocalStartTime = timeZoneService.ConvertFromUtc(utcStartDateTime, tutor.TimeZoneId);
+        var availability = tutor.Availabilities.FirstOrDefault(a => a.Day == tutorLocalStartTime.DayOfWeek);
+
+        if (availability == null)
+        {
+            return false;
+        }
+
+        return availability.TimeSlots.Any(ts =>
+            ts.ContainsRange(utcStartDateTime.TimeOfDay, utcEndDateTime.TimeOfDay));
     }
 }
 
@@ -83,5 +94,7 @@ public record FindAvailableTutorsResponse(
 
 public record AvailableTutorDto(
     Guid Id,
-    string Name
+    string Name,
+    DateTime LocalStartTime,
+    DateTime LocalEndTime
 );
