@@ -186,6 +186,7 @@ public class IdentityService(
             existingUser.Person.Name,
             existingUser.Person.Type,
             existingUser.EmailConfirmed,
+            existingUser.Person.TimeZoneId,
             metadata);
     }
 

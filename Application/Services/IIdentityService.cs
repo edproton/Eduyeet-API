@@ -42,6 +42,7 @@ public record GetMeResponse(
     string Name,
     PersonTypeEnum Type,
     bool EmailConfirmed,
+    string TimeZoneId,
     Metadata Metadata);
 
 public class Metadata
