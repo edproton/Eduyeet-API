@@ -4,7 +4,8 @@ namespace Application.Features.FindAvailableTutors;
 
 public record FindAvailableTutorsQuery(
     Guid QualificationId,
-    DateTime RequestedDateTime
+    DateTime RequestedDateTime,
+    string TimeZoneId
 ) : IRequest<ErrorOr<FindAvailableTutorsResponse>>;
 
 public class FindAvailableTutorsQueryValidator : AbstractValidator<FindAvailableTutorsQuery>
@@ -37,7 +38,7 @@ public class FindAvailableTutorsHandler(
         var tutors = await tutorRepository.GetTutorsWithQualificationAsync(request.QualificationId, cancellationToken);
 
         var availableTutors = new List<AvailableTutorDto>();
-        var utcRequestedDateTime = request.RequestedDateTime.ToUniversalTime();
+        var utcRequestedDateTime = timeZoneService.ConvertToUtc(request.RequestedDateTime, request.TimeZoneId);
         var utcEndDateTime = utcRequestedDateTime.AddHours(1);
 
         foreach (var tutor in tutors)
@@ -72,8 +73,7 @@ public class FindAvailableTutorsHandler(
 
     private bool IsTutorAvailable(Tutor tutor, DateTime utcStartDateTime, DateTime utcEndDateTime)
     {
-        var tutorLocalStartTime = timeZoneService.ConvertFromUtc(utcStartDateTime, tutor.TimeZoneId);
-        var availability = tutor.Availabilities.FirstOrDefault(a => a.Day == tutorLocalStartTime.DayOfWeek);
+        var availability = tutor.Availabilities.FirstOrDefault(a => a.Day == utcStartDateTime.DayOfWeek);
 
         if (availability == null)
         {
@@ -95,6 +95,6 @@ public record FindAvailableTutorsResponse(
 public record AvailableTutorDto(
     Guid Id,
     string Name,
-    DateTime LocalStartTime,
-    DateTime LocalEndTime
+    DateTime StartTimeUtc,
+    DateTime EndTimeUtc
 );

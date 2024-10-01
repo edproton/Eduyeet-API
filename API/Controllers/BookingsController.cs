@@ -37,9 +37,12 @@ public class BookingsController(ISender mediator) : ControllerBase
     }
     
     [HttpGet("available-tutors")]
-    public async Task<ActionResult> FindAvailableTutors([FromQuery] Guid qualificationId, [FromQuery] DateTime requestedDateTime)
+    public async Task<ActionResult> FindAvailableTutors(
+        [FromQuery] Guid qualificationId, 
+        [FromQuery] DateTime requestedDateTime,
+        [FromQuery] string timeZoneId)
     {
-        var query = new FindAvailableTutorsQuery(qualificationId, requestedDateTime);
+        var query = new FindAvailableTutorsQuery(qualificationId, requestedDateTime, timeZoneId);
         var result = await mediator.Send(query);
 
         return result.ToHttpActionResult();
