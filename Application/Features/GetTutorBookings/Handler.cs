@@ -52,5 +52,5 @@ public record BookingDto(
     string StudentName,
     Guid QualificationId,
     string QualificationName,
-    DateTime StartTime,
-    DateTime EndTime);
+    DateTimeOffset StartTime,
+    DateTimeOffset EndTime);

@@ -33,8 +33,7 @@ public class CreateBookingHandler(
             return Errors.Tutor.NotFound(request.TutorId);
         }
 
-        // Keep the start time in UTC
-        var utcStartTime = request.StartTime.ToUniversalTime();
+        var utcStartTime = timeZoneService.ConvertToUtc(request.StartTime, student.TimeZoneId);
         var utcEndTime = utcStartTime.AddHours(1);
 
         var validationResult = await ValidateBookingRequest(request, student, tutor, utcStartTime, utcEndTime, cancellationToken);
@@ -62,8 +61,21 @@ public class CreateBookingHandler(
 
         var studentLocalStartTime = timeZoneService.ConvertFromUtc(booking.StartTime, student.TimeZoneId);
         var studentLocalEndTime = timeZoneService.ConvertFromUtc(booking.EndTime, student.TimeZoneId);
+        var tutorLocalStartTime = timeZoneService.ConvertFromUtc(booking.StartTime, tutor.TimeZoneId);
+        var tutorLocalEndTime = timeZoneService.ConvertFromUtc(booking.EndTime, tutor.TimeZoneId);
 
-        return new CreateBookingResponse(booking.Id, booking.StudentId, booking.TutorId, booking.QualificationId, studentLocalStartTime, studentLocalEndTime);
+        return new CreateBookingResponse(
+            booking.Id, 
+            booking.StudentId, 
+            booking.TutorId, 
+            booking.QualificationId, 
+            studentLocalStartTime, 
+            studentLocalEndTime,
+            tutorLocalStartTime,
+            tutorLocalEndTime,
+            booking.StartTime,
+            booking.EndTime
+        );
     }
 
     private async Task<ErrorOr<Qualification>> ValidateBookingRequest(
@@ -90,14 +102,12 @@ public class CreateBookingHandler(
             return Errors.Booking.StudentNotInterestedInQualification;
         }
 
-        var tutorLocalStartTime = timeZoneService.ConvertFromUtc(utcStartTime, tutor.TimeZoneId);
-        var availability = tutor.Availabilities.FirstOrDefault(a => a.Day == tutorLocalStartTime.DayOfWeek);
+        var availability = tutor.Availabilities.FirstOrDefault(a => a.Day == utcStartTime.DayOfWeek);
         if (availability is null)
         {
             return Errors.Booking.TutorNotAvailable;
         }
 
-        // Directly compare UTC times against the tutor's UTC availabilities
         var relevantTimeSlot = availability.TimeSlots.FirstOrDefault(ts =>
             ts.StartTime <= utcStartTime.TimeOfDay && ts.EndTime >= utcEndTime.TimeOfDay);
 
@@ -116,5 +126,14 @@ public class CreateBookingHandler(
     }
 }
 
-public record CreateBookingResponse(Guid BookingId, Guid StudentId, Guid TutorId, Guid QualificationId, DateTime StartTime, DateTime EndTime);
-
+public record CreateBookingResponse(
+    Guid BookingId, 
+    Guid StudentId, 
+    Guid TutorId, 
+    Guid QualificationId, 
+    DateTimeOffset StudentLocalStartTime, 
+    DateTimeOffset StudentLocalEndTime,
+    DateTimeOffset TutorLocalStartTime,
+    DateTimeOffset TutorLocalEndTime,
+    DateTimeOffset UtcStartTime,
+    DateTimeOffset UtcEndTime);

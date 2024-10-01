@@ -1,113 +1,111 @@
-using NodaTime;
+using System.Collections.Concurrent;
+using Microsoft.Extensions.Logging;
 
 namespace Application.Services;
 
-public class TimeZoneService(IDateTimeZoneProvider dateTimeZoneProvider)
+public class TimeZoneService
 {
-    private static IDictionary<string, string> CountryCodesTimezones = new Dictionary<string, string>
+    private readonly TimeProvider _timeProvider;
+    private readonly ILogger<TimeZoneService> _logger;
+    private static readonly ConcurrentDictionary<string, TimeZoneInfo> TimeZoneCache = new();
+
+    private static readonly IDictionary<string, string> CountryCodesTimezones = new Dictionary<string, string>
     {
-        { "826", "Europe/London" }, // United Kingdom
-        { "784", "Asia/Dubai" }, // United Arab Emirates
-        { "156", "Asia/Shanghai" }, // China (using the time zone for Beijing)
-        { "620", "Europe/Lisbon" } // Portugal
+        { "826", "Europe/London" },
+        { "784", "Asia/Dubai" },
+        { "156", "Asia/Shanghai" },
+        { "620", "Europe/Lisbon" }
     };
 
-    private readonly IDateTimeZoneProvider _dateTimeZoneProvider = dateTimeZoneProvider
-                                                                   ?? throw new ArgumentNullException(
-                                                                       nameof(dateTimeZoneProvider));
+    public TimeZoneService(TimeProvider timeProvider, ILogger<TimeZoneService> logger)
+    {
+        _timeProvider = timeProvider;
+        _logger = logger;
+    }
+
+    public static string? GetTimeZoneByCountryCode(string countryCode)
+    {
+        return CountryCodesTimezones.TryGetValue(countryCode, out var timeZone) ? timeZone : null;
+    }
+
+    public DateTime ConvertToUtc(DateTime localTime, string timeZoneId)
+    {
+        var timeZoneInfo = GetTimeZoneInfo(timeZoneId);
+        return TimeZoneInfo.ConvertTimeToUtc(localTime, timeZoneInfo);
+    }
+
+    public DateTime ConvertFromUtc(DateTime utcTime, string timeZoneId)
+    {
+        var timeZoneInfo = GetTimeZoneInfo(timeZoneId);
+        return TimeZoneInfo.ConvertTimeFromUtc(utcTime, timeZoneInfo);
+    }
     
-    public static string? GetTimeZoneId(string countryCode)
+    public DateTimeOffset ConvertFromUtc(DateTimeOffset utcTime, string timeZoneId)
     {
-        if (string.IsNullOrWhiteSpace(countryCode))
-            return null;
-
-        return !CountryCodesTimezones.TryGetValue(countryCode, out var timeZoneId) ? null : timeZoneId;
+        var timeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
+        return TimeZoneInfo.ConvertTime(utcTime, timeZoneInfo);
     }
 
-    public DateTime ConvertToUtc(DateTime dateTime, string timeZoneId)
+    public TimeSpan ConvertTimeToUtc(TimeSpan localTime, string timeZoneId, DayOfWeek dayOfWeek)
     {
-        var zone = GetTimeZone(timeZoneId);
-        var localDateTime = LocalDateTime.FromDateTime(dateTime);
-        var zonedDateTime = zone.AtLeniently(localDateTime);
-        return zonedDateTime.ToDateTimeUtc();
-    }
+        var timeZoneInfo = GetTimeZoneInfo(timeZoneId);
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        var targetDate = GetTargetDate(now, dayOfWeek);
 
-    public DateTime ConvertFromUtc(DateTime utcDateTime, string timeZoneId)
-    {
-        var zone = GetTimeZone(timeZoneId);
-        var instant = Instant.FromDateTimeUtc(DateTime.SpecifyKind(utcDateTime, DateTimeKind.Utc));
-        var zonedDateTime = instant.InZone(zone);
-        return zonedDateTime.ToDateTimeUnspecified();
-    }
+        var localDateTime = new DateTime(targetDate.Year, targetDate.Month, targetDate.Day, localTime.Hours, localTime.Minutes, localTime.Seconds, DateTimeKind.Unspecified);
 
-    public bool IsAvailable(
-        Availability availability,
-        DateTime localDateTime,
-        string timeZoneId)
-    {
-        if (availability == null)
-            throw new ArgumentNullException(nameof(availability));
+        var utcDateTime = TimeZoneInfo.ConvertTimeToUtc(localDateTime, timeZoneInfo);
 
-        var utcDateTime = ConvertToUtc(localDateTime, timeZoneId);
-        return availability.IsAvailableAt(utcDateTime); // Assuming Availability has this method
-    }
-
-    public IReadOnlyList<string> GetSupportedTimeZones()
-    {
-        return _dateTimeZoneProvider.Ids.ToList().AsReadOnly();
-        // Return a read-only list for safety
-    }
-
-    public TimeSpan ConvertTimeToUtc(
-        TimeSpan localTime,
-        string timeZoneId,
-        DayOfWeek dayOfWeek)
-    {
-        var zone = GetTimeZone(timeZoneId);
-        var now = SystemClock.Instance.GetCurrentInstant();
-        var todayInZone = now.InZone(zone).Date;
-
-        var targetDate = todayInZone.Next((IsoDayOfWeek)((int)dayOfWeek + 1));
-
-        var localDateTime = targetDate +
-                            new LocalTime(localTime.Hours,
-                                localTime.Minutes,
-                                localTime.Seconds,
-                                localTime.Milliseconds);
-
-        var utcDateTime = zone.AtLeniently(localDateTime).ToInstant().ToDateTimeUtc();
         return utcDateTime.TimeOfDay;
     }
 
-    public TimeSpan ConvertTimeFromUtc(
-        TimeSpan utcTime,
-        string timeZoneId,
-        DayOfWeek dayOfWeek)
+    public TimeSpan ConvertTimeFromUtc(TimeSpan utcTime, string timeZoneId, DayOfWeek dayOfWeek)
     {
-        var zone = GetTimeZone(timeZoneId);
-        var now = SystemClock.Instance.GetCurrentInstant();
-        var todayInUtc = now.InUtc().Date;
+        var timeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        var targetDateUtc = GetTargetDate(now, dayOfWeek);
 
-        var targetDateUtc = todayInUtc.Next((IsoDayOfWeek)((int)dayOfWeek + 1));
+        var utcDateTime = new DateTimeOffset(targetDateUtc.Date + utcTime, TimeSpan.Zero);
+        var localDateTime = TimeZoneInfo.ConvertTime(utcDateTime, timeZoneInfo);
 
-        var utcDateTime = targetDateUtc.AtStartOfDayInZone(DateTimeZone.Utc)
-            .PlusTicks(utcTime.Ticks);
-        var localDateTime = utcDateTime.WithZone(zone);
-
-        return new TimeSpan(
-            localDateTime.TimeOfDay.Hour,
-            localDateTime.TimeOfDay.Minute,
-            localDateTime.TimeOfDay.Second);
+        return localDateTime.TimeOfDay;
     }
 
-    private DateTimeZone GetTimeZone(string timeZoneId)
+    private DateTime GetTargetDate(DateTime referenceDate, DayOfWeek targetDayOfWeek)
+    {
+        int daysToAdd = ((int)targetDayOfWeek - (int)referenceDate.DayOfWeek + 7) % 7;
+        return referenceDate.AddDays(daysToAdd);
+    }
+
+    private TimeZoneInfo GetTimeZoneInfo(string timeZoneId)
     {
         if (string.IsNullOrWhiteSpace(timeZoneId))
+        {
             throw new ArgumentException("Time zone ID cannot be null or empty.", nameof(timeZoneId));
+        }
 
-        if (!_dateTimeZoneProvider.Ids.Contains(timeZoneId))
-            throw new ArgumentException($"Invalid time zone ID: {timeZoneId}", nameof(timeZoneId));
+        return TimeZoneCache.GetOrAdd(timeZoneId, id =>
+        {
+            try
+            {
+                return TimeZoneInfo.FindSystemTimeZoneById(id);
+            }
+            catch (TimeZoneNotFoundException)
+            {
+                _logger.LogError("Time zone not found: {TimeZoneId}", id);
+                throw;
+            }
+            catch (InvalidTimeZoneException)
+            {
+                _logger.LogError("Invalid time zone: {TimeZoneId}", id);
+                throw;
+            }
+        });
+    }
 
-        return _dateTimeZoneProvider[timeZoneId];
+    // Method to update country code to time zone mapping
+    public static void UpdateCountryCodeTimeZone(string countryCode, string timeZoneId)
+    {
+        CountryCodesTimezones[countryCode] = timeZoneId;
     }
 }

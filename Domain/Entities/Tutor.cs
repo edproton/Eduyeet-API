@@ -24,22 +24,6 @@ public class Availability : BaseEntity
     public Tutor Tutor { get; set; } = default!;
     public DayOfWeek Day { get; set; }
     public List<TimeSlot> TimeSlots { get; set; } = [];
-
-    public bool IsAvailableAt(DateTime utcDateTime)
-    {
-        if (utcDateTime.Kind != DateTimeKind.Utc)
-        {
-            throw new ArgumentException("DateTime must be in UTC", nameof(utcDateTime));
-        }
-
-        if (utcDateTime.DayOfWeek != Day)
-        {
-            return false;
-        }
-
-        var timeOfDay = utcDateTime.TimeOfDay;
-        return TimeSlots.Any(slot => slot.Contains(timeOfDay));
-    }
 }
 
 public class TimeSlot : BaseEntity
@@ -72,19 +56,28 @@ public class Booking : BaseEntity
     public Guid QualificationId { get; set; }
     public Qualification Qualification { get; set; } = default!;
 
-    private DateTime _startTime;
-
-    public DateTime StartTime
+    private DateTimeOffset _startTime;
+    public DateTimeOffset StartTime
     {
         get => _startTime;
-        set => _startTime = DateTime.SpecifyKind(value, DateTimeKind.Utc);
+        set => _startTime = value.ToUniversalTime();
     }
 
-    private DateTime _endTime;
-
-    public DateTime EndTime
+    private DateTimeOffset _endTime;
+    public DateTimeOffset EndTime
     {
         get => _endTime;
-        set => _endTime = DateTime.SpecifyKind(value, DateTimeKind.Utc);
+        set => _endTime = value.ToUniversalTime();
+    }
+
+    public void SetTimeRange(DateTimeOffset start, DateTimeOffset end)
+    {
+        if (start >= end)
+        {
+            throw new ArgumentException("Start time must be before end time");
+        }
+
+        StartTime = start;
+        EndTime = end;
     }
 }

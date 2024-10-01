@@ -33,7 +33,7 @@ public class CreatePersonCommandValidator : AbstractValidator<CreatePersonComman
         RuleFor(c => c.CountryCode)
             .NotEmpty().WithMessage("Country code cannot be empty.")
             .Length(3).WithMessage("Country code must be 3 characters long.")
-            .Must(code => TimeZoneService.GetTimeZoneId(code) != null)
+            .Must(code => TimeZoneService.GetTimeZoneByCountryCode(code) != null)
             .WithMessage("Invalid country code. The country code must correspond to a valid time zone.");
     }
 }
@@ -51,8 +51,8 @@ public class CreatePersonCommandHandler(
     {
         Person person = request.Type switch
         {
-            PersonTypeEnum.Tutor => new Tutor { Name = request.Name, TimeZoneId = TimeZoneService.GetTimeZoneId(request.CountryCode)! },
-            PersonTypeEnum.Student => new Student { Name = request.Name, TimeZoneId = TimeZoneService.GetTimeZoneId(request.CountryCode)! },
+            PersonTypeEnum.Tutor => new Tutor { Name = request.Name, TimeZoneId = TimeZoneService.GetTimeZoneByCountryCode(request.CountryCode)! },
+            PersonTypeEnum.Student => new Student { Name = request.Name, TimeZoneId = TimeZoneService.GetTimeZoneByCountryCode(request.CountryCode)! },
             _ => throw new ArgumentException("Invalid person type", nameof(request.Type))
         };
         

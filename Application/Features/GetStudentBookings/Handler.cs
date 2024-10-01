@@ -1,7 +1,6 @@
 using Application.Services;
 
 namespace Application.Features.GetStudentBookings;
-
 public record GetStudentBookingsQuery(Guid StudentId) : IRequest<ErrorOr<IEnumerable<GetStudentBookingsResponse>>>;
 
 public class GetStudentBookingsQueryValidator : AbstractValidator<GetStudentBookingsQuery>
@@ -28,7 +27,6 @@ public class GetStudentBookingsHandler(
             return Error.NotFound("StudentNotFound", $"A student with the ID '{request.StudentId}' was not found.");
         }
 
-        // Efficiently fetch bookings with related Tutor and Qualification data
         var bookings = await bookingRepository.GetBookingsByStudentIdWithTutorAndQualificationAsync(
             request.StudentId, cancellationToken);
 
@@ -36,9 +34,9 @@ public class GetStudentBookingsHandler(
             new GetStudentBookingsResponse(
                 b.Id,
                 b.TutorId,
-                b.Tutor!.Name, // Assuming Tutor is included in the fetched data
+                b.Tutor!.Name,
                 b.QualificationId,
-                b.Qualification!.Name, // Assuming Qualification is included in the fetched data
+                b.Qualification!.Name, 
                 timeZoneService.ConvertFromUtc(b.StartTime, student.TimeZoneId),
                 timeZoneService.ConvertFromUtc(b.EndTime, student.TimeZoneId)
             ));
@@ -53,5 +51,5 @@ public record GetStudentBookingsResponse(
     string TutorName,
     Guid QualificationId,
     string QualificationName,
-    DateTime StartTime,
-    DateTime EndTime);
+    DateTimeOffset StartTime,
+    DateTimeOffset EndTime);

@@ -1,5 +1,4 @@
 using Application.Services;
-using NodaTime;
 
 namespace Application.Features.SetTutorAvailability;
 
@@ -42,7 +41,6 @@ public class SetTutorAvailabilityHandler(
     ITutorRepository tutorRepository,
     IAvailabilityRepository availabilityRepository,
     IUnitOfWork unitOfWork,
-    IDateTimeZoneProvider dateTimeZoneProvider,
     TimeZoneService timeZoneService)
     : IRequestHandler<SetTutorAvailabilityCommand, ErrorOr<SetTutorAvailabilityResponse>>
 {
@@ -50,7 +48,8 @@ public class SetTutorAvailabilityHandler(
         SetTutorAvailabilityCommand request,
         CancellationToken cancellationToken)
     {
-        var tutor = await tutorRepository.GetByIdWithQualificationsAndAvailabilitiesAsync(request.PersonId,
+        var tutor = await tutorRepository.GetByIdWithQualificationsAndAvailabilitiesAsync(
+            request.PersonId,
             cancellationToken);
         if (tutor == null)
         {
@@ -88,7 +87,10 @@ public class SetTutorAvailabilityHandler(
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new SetTutorAvailabilityResponse(request.PersonId, request.Availabilities);
+        // Convert the stored UTC availabilities back to the tutor's local time zone
+        var localAvailabilities = ConvertAvailabilitiesToLocal(tutor.Availabilities, tutor.TimeZoneId);
+
+        return new SetTutorAvailabilityResponse(request.PersonId, localAvailabilities);
     }
 
     private List<TimeSlot> ConvertTimeSlotsToUtc(
@@ -96,42 +98,22 @@ public class SetTutorAvailabilityHandler(
         string tutorTimezoneId,
         DayOfWeek dayOfWeek)
     {
-        var zone = dateTimeZoneProvider[tutorTimezoneId];
-        var now = SystemClock.Instance.GetCurrentInstant();
-        var todayInZone = now.InZone(zone).Date;
-
-        // Find the next occurrence of the target day of the week
-        var targetDayOfWeek = (IsoDayOfWeek)((int)dayOfWeek + 1); // Convert DayOfWeek to IsoDayOfWeek
-        var targetDate = FindNextOccurrence(todayInZone, targetDayOfWeek);
-
-        return timeSlots.Select(ts =>
+        return timeSlots.Select(ts => new TimeSlot
         {
-            // Create a LocalDateTime in the tutor's time zone on the target day
-            var localDateTime = targetDate + LocalTime.FromHourMinuteSecondTick(
-                ts.StartTime.Hours, ts.StartTime.Minutes, ts.StartTime.Seconds, ts.StartTime.Milliseconds * 10000);
-
-            // Convert the LocalDateTime to a ZonedDateTime, handling DST automatically
-            var zonedDateTime = zone.AtLeniently(localDateTime);
-
-            // Extract the UTC time from the ZonedDateTime
-            var utcDateTime = zonedDateTime.ToDateTimeUtc();
-
-            return new TimeSlot
-            {
-                StartTime = utcDateTime.TimeOfDay,
-                EndTime = timeZoneService.ConvertTimeToUtc(ts.EndTime, tutorTimezoneId, dayOfWeek) 
-            };
+            StartTime = timeZoneService.ConvertTimeToUtc(ts.StartTime, tutorTimezoneId, dayOfWeek),
+            EndTime = timeZoneService.ConvertTimeToUtc(ts.EndTime, tutorTimezoneId, dayOfWeek)
         }).ToList();
     }
 
-    private LocalDate FindNextOccurrence(LocalDate startDate, IsoDayOfWeek targetDayOfWeek)
+    private List<AvailabilityDto> ConvertAvailabilitiesToLocal(List<Availability> utcAvailabilities, string tutorTimezoneId)
     {
-        var targetDate = startDate;
-        while (targetDate.DayOfWeek != targetDayOfWeek)
-        {
-            targetDate = targetDate.PlusDays(1);
-        }
-        return targetDate;
+        return utcAvailabilities.Select(a => new AvailabilityDto(
+            a.Day,
+            a.TimeSlots.Select(ts => new TimeSlotDto(
+                timeZoneService.ConvertTimeFromUtc(ts.StartTime, tutorTimezoneId, a.Day),
+                timeZoneService.ConvertTimeFromUtc(ts.EndTime, tutorTimezoneId, a.Day)
+            )).ToList()
+        )).ToList();
     }
 }
 
