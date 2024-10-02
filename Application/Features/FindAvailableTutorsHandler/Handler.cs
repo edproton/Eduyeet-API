@@ -1,90 +1,122 @@
+
 using Application.Services;
+using Microsoft.Extensions.Logging;
 
 namespace Application.Features.FindAvailableTutorsHandler;
 
-public record FindAvailableTutorsQuery(Guid QualificationId, string TimeZoneId) 
-    : IRequest<ErrorOr<IEnumerable<FindAvailableTutorsResponse>>>;
+public record FindTutorAvailabilityQuery(
+    Guid TutorId,
+    int Month,
+    int Day,
+    int Year,
+    string TimeZoneId)
+    : IRequest<ErrorOr<FindTutorAvailabilityResponse>>;
 
-public class FindAvailableTutorsQueryValidator : AbstractValidator<FindAvailableTutorsQuery>
+public class FindTutorAvailabilityQueryValidator : AbstractValidator<FindTutorAvailabilityQuery>
 {
-    public FindAvailableTutorsQueryValidator()
+    public FindTutorAvailabilityQueryValidator()
     {
-        RuleFor(q => q.QualificationId).NotEmpty().WithMessage("Qualification ID is required.");
+        RuleFor(q => q.TutorId).NotEmpty().WithMessage("Tutor ID is required.");
+        RuleFor(q => q.Month).InclusiveBetween(1, 12).WithMessage("Invalid month.");
+        RuleFor(q => q.Day).InclusiveBetween(1, 31).WithMessage("Invalid day.");
+        RuleFor(q => q.Year).GreaterThan(2000).WithMessage("Invalid year.");
         RuleFor(q => q.TimeZoneId).NotEmpty().WithMessage("Time Zone ID is required.");
     }
 }
 
-public class FindAvailableTutorsHandler(
-    IQualificationRepository qualificationRepository,
+public class FindTutorAvailabilityHandler(
     ITutorRepository tutorRepository,
     IBookingRepository bookingRepository,
     TimeZoneService timeZoneService)
-    : IRequestHandler<FindAvailableTutorsQuery, ErrorOr<IEnumerable<FindAvailableTutorsResponse>>>
+    : IRequestHandler<FindTutorAvailabilityQuery, ErrorOr<FindTutorAvailabilityResponse>>
 {
-    public async Task<ErrorOr<IEnumerable<FindAvailableTutorsResponse>>> Handle(
-        FindAvailableTutorsQuery request,
+    public async Task<ErrorOr<FindTutorAvailabilityResponse>> Handle(
+        FindTutorAvailabilityQuery request,
         CancellationToken cancellationToken)
     {
-        var qualification = await qualificationRepository.GetByIdAsync(request.QualificationId, cancellationToken);
-        if (qualification == null)
+        var tutor = await tutorRepository.GetByIdWithAvailabilitiesAsync(request.TutorId, cancellationToken);
+        if (tutor == null)
         {
-            return Error.NotFound("QualificationNotFound", $"A qualification with the ID '{request.QualificationId}' was not found.");
+            return Error.NotFound("TutorNotFound", $"A tutor with the ID '{request.TutorId}' was not found.");
         }
 
-        var tutors = await tutorRepository.GetTutorsWithQualificationAndAvailabilitiesAsync(request.QualificationId, cancellationToken);
+        var requestedDate = new DateTimeOffset(request.Year, request.Month, request.Day, 0, 0, 0, TimeSpan.Zero);
+        var requestedDateInTutorTimeZone = timeZoneService.ConvertFromUtc(requestedDate.UtcDateTime, tutor.TimeZoneId);
+        var requestedDayOfWeek = requestedDateInTutorTimeZone.DayOfWeek;
 
-       var availableTutors = new List<FindAvailableTutorsResponse>();
+        var availableTimeSlots = new List<TimeSlotDto>();
 
-        foreach (var tutor in tutors)
+        var availability = tutor.Availabilities.FirstOrDefault(a => a.Day == requestedDayOfWeek);
+        if (availability != null)
         {
-            var availableAvailabilities = new List<AvailabilityDto>();
-
-            foreach (var availability in tutor.Availabilities)
+            foreach (var mainTimeSlot in availability.TimeSlots)
             {
-                var availableTimeSlots = new List<TimeSlotDto>();
+                var tutorStartTime = new DateTimeOffset(requestedDateInTutorTimeZone.Year, requestedDateInTutorTimeZone.Month, requestedDateInTutorTimeZone.Day, 
+                    mainTimeSlot.StartTime.Hours, mainTimeSlot.StartTime.Minutes, 0, 
+                    TimeSpan.Zero).ToUniversalTime();
+                
+                var tutorEndTime = new DateTimeOffset(requestedDateInTutorTimeZone.Year, requestedDateInTutorTimeZone.Month, requestedDateInTutorTimeZone.Day, 
+                    mainTimeSlot.EndTime.Hours, mainTimeSlot.EndTime.Minutes, 0, 
+                    TimeSpan.Zero).ToUniversalTime();
 
-                foreach (var timeSlot in availability.TimeSlots)
+                if (tutorEndTime <= tutorStartTime)
                 {
-                    // Check for overlapping bookings in UTC
+                    tutorEndTime = tutorEndTime.AddDays(1);
+                }
+
+                var innerTimeSlots = GenerateInnerTimeSlots(tutorStartTime, tutorEndTime);
+
+                foreach (var (innerStartTime, innerEndTime) in innerTimeSlots)
+                {
                     var hasOverlappingBooking = await bookingRepository.GetOverlappingBookingAsync(
                         tutor.Id,
-                        new DateTime(timeSlot.StartTime.Ticks, DateTimeKind.Utc), // Ensure DateTimeKind is UTC
-                        new DateTime(timeSlot.EndTime.Ticks, DateTimeKind.Utc),   // Ensure DateTimeKind is UTC
+                        innerStartTime.UtcDateTime,
+                        innerEndTime.UtcDateTime,
                         cancellationToken);
 
                     if (hasOverlappingBooking == null)
                     {
-                        // Convert to the requested time zone
-                        var startTime = timeZoneService.ConvertTimeFromUtc(timeSlot.StartTime, request.TimeZoneId, availability.Day);
-                        var endTime = timeZoneService.ConvertTimeFromUtc(timeSlot.EndTime, request.TimeZoneId, availability.Day);
+                        var localStartTime = timeZoneService.ConvertFromUtc(innerStartTime.UtcDateTime, request.TimeZoneId);
+                        var localEndTime = timeZoneService.ConvertFromUtc(innerEndTime.UtcDateTime, request.TimeZoneId);
 
-                        availableTimeSlots.Add(new TimeSlotDto(
-                            startTime.ToString(@"hh\:mm"),
-                            endTime.ToString(@"hh\:mm")));
+                        if (localStartTime.Date == requestedDate.Date || localEndTime.Date == requestedDate.Date)
+                        {
+                            availableTimeSlots.Add(new TimeSlotDto(
+                                localStartTime.ToString("HH:mm"),
+                                localEndTime.ToString("HH:mm")));
+                        }
                     }
                 }
-
-                if (availableTimeSlots.Any())
-                {
-                    availableAvailabilities.Add(new AvailabilityDto(
-                        availability.Day,
-                        availableTimeSlots));
-                }
-            }
-
-            if (availableAvailabilities.Any())
-            {
-                availableTutors.Add(new FindAvailableTutorsResponse(
-                    new TutorDto(tutor.Id, tutor.Name),
-                    availableAvailabilities));
             }
         }
 
-        return availableTutors;
+        return new FindTutorAvailabilityResponse(
+            new TutorDto(tutor.Id, tutor.Name),
+            new AvailabilityDto(requestedDayOfWeek, availableTimeSlots));
+    }
+
+    private List<(DateTimeOffset StartTime, DateTimeOffset EndTime)> GenerateInnerTimeSlots(DateTimeOffset startTime, DateTimeOffset endTime)
+    {
+        var innerTimeSlots = new List<(DateTimeOffset StartTime, DateTimeOffset EndTime)>();
+        var currentStartTime = startTime;
+
+        while (currentStartTime < endTime)
+        {
+            var currentEndTime = currentStartTime.AddHours(1);
+            if (currentEndTime > endTime)
+            {
+                currentEndTime = endTime;
+            }
+
+            innerTimeSlots.Add((currentStartTime, currentEndTime));
+            currentStartTime = currentEndTime;
+        }
+
+        return innerTimeSlots;
     }
 }
 
-public record FindAvailableTutorsResponse(TutorDto Tutor, List<AvailabilityDto> Availabilities);
+public record FindTutorAvailabilityResponse(TutorDto Tutor, AvailabilityDto Availability);
 
 public record TutorDto(Guid Id, string Name);
 

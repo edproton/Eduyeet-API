@@ -14,19 +14,11 @@ public class BookingRepository(ApplicationDbContext context)
         DateTime endTime,
         CancellationToken cancellationToken)
     {
-        var utcStartTime = startTime.Kind == DateTimeKind.Unspecified 
-            ? DateTime.SpecifyKind(startTime, DateTimeKind.Utc)
-            : startTime.ToUniversalTime();
-        
-        var utcEndTime = endTime.Kind == DateTimeKind.Unspecified 
-            ? DateTime.SpecifyKind(endTime, DateTimeKind.Utc)
-            : endTime.ToUniversalTime();
-
         return Context.Bookings
             .FirstOrDefaultAsync(b =>
                     b.TutorId == tutorId &&
-                    b.StartTime < utcEndTime &&
-                    b.EndTime > utcStartTime,
+                    b.StartTime.UtcDateTime < endTime && 
+                    b.EndTime.UtcDateTime > startTime, 
                 cancellationToken);
     }
 

@@ -89,7 +89,7 @@ public class SetTutorAvailabilityTests : IntegrationTestBase
         // Verify the updated availability was correctly stored in the database
         var storedTutor = await TutorRepository.GetByIdWithQualificationsAndAvailabilitiesAsync(_tutorId, CancellationToken.None);
         storedTutor.Should().NotBeNull();
-        storedTutor.Availabilities.Should().HaveCount(1);
+        storedTutor!.Availabilities.Should().HaveCount(1);
         storedTutor.Availabilities[0].Day.Should().Be(DayOfWeek.Monday);
         storedTutor.Availabilities[0].TimeSlots.Should().HaveCount(1);
 

@@ -28,10 +28,19 @@ public class TimeZoneService
         return CountryCodesTimezones.TryGetValue(countryCode, out var timeZone) ? timeZone : null;
     }
 
-    public DateTime ConvertToUtc(DateTime localTime, string timeZoneId)
+    public DateTime ConvertToUtc(DateTime dateTime, string timeZoneId)
     {
         var timeZoneInfo = GetTimeZoneInfo(timeZoneId);
-        return TimeZoneInfo.ConvertTimeToUtc(localTime, timeZoneInfo);
+
+        // If the DateTime is already in UTC, return it as is
+        if (dateTime.Kind == DateTimeKind.Utc)
+        {
+            return dateTime;
+        }
+
+        // If the DateTime is Local or Unspecified, treat it as if it were in the specified time zone
+        var dateTimeOffset = new DateTimeOffset(dateTime, timeZoneInfo.GetUtcOffset(dateTime));
+        return dateTimeOffset.UtcDateTime;
     }
 
     public DateTime ConvertFromUtc(DateTime utcTime, string timeZoneId)
@@ -42,7 +51,7 @@ public class TimeZoneService
     
     public DateTimeOffset ConvertFromUtc(DateTimeOffset utcTime, string timeZoneId)
     {
-        var timeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
+        var timeZoneInfo = GetTimeZoneInfo(timeZoneId);
         return TimeZoneInfo.ConvertTime(utcTime, timeZoneInfo);
     }
 
@@ -77,7 +86,7 @@ public class TimeZoneService
         return referenceDate.AddDays(daysToAdd);
     }
 
-    private TimeZoneInfo GetTimeZoneInfo(string timeZoneId)
+    public TimeZoneInfo GetTimeZoneInfo(string timeZoneId)
     {
         if (string.IsNullOrWhiteSpace(timeZoneId))
         {

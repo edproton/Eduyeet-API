@@ -1,15 +1,16 @@
 using Application.Features.CreateBooking;
 using Application.Features.FindAvailableTutorsHandler;
+using Application.Features.GetAllTutorsByQualificationId;
 using Application.Features.GetStudentBookings;
 using Application.Features.GetTutorBookings;
+using Microsoft.AspNetCore.Authorization;
 
 namespace API.Controllers;
 
 [ApiController]
 [Route("api/bookings")]
 public class BookingsController(
-    ISender mediator,
-    TimeProvider timeProvider) : ControllerBase
+    ISender mediator) : ControllerBase
 {
     [HttpPost]
     public async Task<ActionResult> CreateBooking(CreateBookingCommand command)
@@ -37,12 +38,26 @@ public class BookingsController(
         return result.ToHttpActionResult();
     }
     
-    [HttpGet("available-tutors")]
+    [HttpGet("available-tutors-by-qualification")]
+    public async Task<ActionResult> FindAvailableTutorsByQualification(
+        [FromQuery] Guid qualificationId)
+    {
+        var query = new GetAllTutorsByQualificationIdQuery(qualificationId);
+        var result = await mediator.Send(query);
+
+        return result.ToHttpActionResult();
+    }
+    
+    [HttpGet("find-tutor-availability")]
+    [AllowAnonymous]
     public async Task<ActionResult> FindAvailableTutors(
-        [FromQuery] Guid qualificationId, 
+        [FromQuery] Guid tutorId,
+        [FromQuery] int month,
+        [FromQuery] int day,
+        [FromQuery] int year,
         [FromQuery] string timeZoneId)
     {
-        var query = new FindAvailableTutorsQuery(qualificationId, timeZoneId);
+        var query = new FindTutorAvailabilityQuery(tutorId, month, day, year, timeZoneId);
         var result = await mediator.Send(query);
 
         return result.ToHttpActionResult();

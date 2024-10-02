@@ -12,9 +12,9 @@ namespace Application.IntegrationTests.Shared;
 [TestClass]
 public abstract class IntegrationTestBase
 {
-    protected static IServiceProvider ServiceProvider;
-    protected static IConfiguration Configuration;
-    private IServiceScope _scope;
+    protected static IServiceProvider ServiceProvider = default!;
+    protected static IConfiguration Configuration = default!;
+    private IServiceScope _scope = default!;
 
     [AssemblyInitialize]
     public static void AssemblyInitialize(TestContext context)

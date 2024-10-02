@@ -110,7 +110,6 @@ public class CreateBookingHandler(
 
         var relevantTimeSlot = availability.TimeSlots.FirstOrDefault(ts =>
             ts.StartTime <= utcStartTime.TimeOfDay && ts.EndTime >= utcEndTime.TimeOfDay);
-
         if (relevantTimeSlot is null)
         {
             return Errors.Booking.TutorNotAvailable;

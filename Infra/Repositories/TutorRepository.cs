@@ -25,4 +25,24 @@ public class TutorRepository(ApplicationDbContext context) : Repository<Tutor>(c
             .Where(t => t.AvailableQualifications.Any(q => q.Id == qualificationId))
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<Tutor?> GetTutorWithQualificationAndAvailabilitiesAsync(
+        Guid tutorId,
+        Guid qualificationId,
+        CancellationToken cancellationToken)
+    {
+        return await Context.Tutors
+            .Include(t => t.AvailableQualifications)
+            .Include(t => t.Availabilities)
+            .ThenInclude(a => a.TimeSlots)
+            .FirstOrDefaultAsync(t => t.Id == tutorId && t.AvailableQualifications.Any(q => q.Id == qualificationId), cancellationToken);
+    }
+
+    public async Task<Tutor?> GetByIdWithAvailabilitiesAsync(Guid tutorId, CancellationToken cancellationToken)
+    {
+        return await Context.Tutors
+            .Include(t => t.Availabilities)
+            .ThenInclude(a => a.TimeSlots)
+            .FirstOrDefaultAsync(t => t.Id == tutorId, cancellationToken);
+    }
 }
